@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: Toggle Reposts
 // @description Toggle the visibility of reposts on the stream and artists page.
-// @version     2022.9.12
+// @version     2022.9.16
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts
 // @match       https://soundcloud.com/*
@@ -10,7 +10,6 @@
 // ==/UserScript==
 const app = document.getElementById("app");
 const config = { childList: true, subtree: true };
-var drewSwitch = false;
 var showReposts;
 var toggleButtonHandle;
 function checkCookie() {
@@ -23,9 +22,8 @@ function checkCookie() {
 //Stream and UserStream
 const callback = (mutationList, observer) => {
     for (const mutation of mutationList) {
-        if (mutation.type === 'childList' && document.querySelector(".stream, .userStream") && !drewSwitch) {
+        if (mutation.type === 'childList' && document.querySelector(".stream, .userStream") && !document.getElementById("toggleButton")) {
             if (document.querySelector(".lazyLoadingList, .soundList")) {
-                drewSwitch = true;
                 document.querySelector(".profileTabs, .stream__header").innerHTML += `<div class ="g-flex-row-centered"><div class="toggleFormControl"><div class="toggleFormControl">
           <label id="toggleButtonHandle" class="toggle sc-toggle toggleFormControl__toggle sc-mx-1x sc-toggle-active sc-toggle-on">
             <span class="sc-toggle-handle"></span>
@@ -89,6 +87,5 @@ new MutationObserver(() => {
 }).observe(document, {subtree: true, childList: true});
 
 function onUrlChange() {
-    drewSwitch = false;
     appObserver.observe(app, config);
 }
