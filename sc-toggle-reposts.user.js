@@ -77,7 +77,7 @@ function toggle() {
     evalReposts();
 }
 
-let lastUrl = location.href; 
+let lastUrl = '';
 new MutationObserver(() => {
     const url = location.href;
     if (url !== lastUrl) {
