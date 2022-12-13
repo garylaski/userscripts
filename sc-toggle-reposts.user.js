@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: Toggle Reposts
 // @description Toggle the visibility of reposts on the stream and artists page.
-// @version     2022.9.16
+// @version     2022.12.13
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts
 // @match       https://soundcloud.com/*
@@ -10,13 +10,8 @@
 // @grant       GM_getValue
 // @grant       GM_setValue
 // ==/UserScript==
-// ==UserScript==
-// @name        Soundcloud helper
-// @match       https://soundcloud.com/*
-// @grant       GM_getValue
-// @grant       GM_setValue
-// ==/UserScript==
 let streamSelector = '';
+let buttonSelector = '';
 let toggleButtonHandle = null;
 
 function waitTillExists(selector, callback) {
@@ -30,6 +25,7 @@ function waitTillExists(selector, callback) {
 }
 
 function createButton(location) {
+  console.log("called");
   location.innerHTML += `<div class ="g-flex-row-centered">
                              <div class="toggleFormControl">
                                 <div class="toggleFormControl">
@@ -91,11 +87,13 @@ const urlObserver = new MutationObserver(function(mutations) {
     previousUrl = location.href;
     if (location.href == "https://soundcloud.com/feed") {
       streamSelector = ".stream__list .lazyLoadingList ul";
+      buttonSelector = ".stream__header";
     } else {
       streamSelector = ".userStream__list ul";
+      buttonSelector = ".profileTabs";
     }
     waitTillExists(streamSelector, monitorStream);
-    waitTillExists(".profileTabs, .stream__header", createButton);
+    waitTillExists(buttonSelector, createButton);
   }
 });
 
