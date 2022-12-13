@@ -7,18 +7,13 @@
 // @match       https://soundcloud.com/*
 // @licence     GPL-3.0-or-later; http://www.gnu.org/licenses/gpl-3.0.txt
 // @run-at      document-end
+// @grant       GM_getValue
+// @grant       GM_setValue
 // ==/UserScript==
 const app = document.getElementById("app");
 const config = { childList: true, subtree: true };
 var showReposts;
 var toggleButtonHandle;
-function checkCookie() {
-    if(document.cookie.split('; ').find((row) => row.startsWith('showReposts='))?.split('=')[1]) {
-        showReposts = document.cookie.split('; ').find((row) => row.startsWith('showReposts='))?.split('=')[1];
-    } else {
-        document.cookie="showReposts="+showReposts;
-    }
-}
 //Stream and UserStream
 const callback = (mutationList, observer) => {
     for (const mutation of mutationList) {
@@ -34,11 +29,11 @@ const callback = (mutationList, observer) => {
                 document.getElementById("toggleButton").addEventListener("click", toggle);
                 toggleButtonHandle = document.getElementById("toggleButtonHandle");
                 observer.disconnect();
-                checkCookie();
+                showReposts = GM_getValue("showReposts");
                 if(showReposts === 'false') {
                     toggleButtonHandle.classList.remove("sc-toggle-on");
                     toggleButtonHandle.classList.remove("sc-toggle-active");
-                    toggleButtonHandle.classList.add("sc-toggle-off");      
+                    toggleButtonHandle.classList.add("sc-toggle-off");
                 }
                 postObserver.observe(document.querySelector(".userMain, .stream"), config);
             }
@@ -58,7 +53,7 @@ function evalReposts() {
                 item.style.display = "none";
             }
         }
-    }  
+    }
 }
 
 function toggle() {
@@ -73,7 +68,7 @@ function toggle() {
         toggleButtonHandle.classList.add("sc-toggle-off");
         showReposts = 'false';
     }
-    document.cookie="showReposts="+showReposts;
+    GM_setValue("showReposts",showReposts);
     evalReposts();
 }
 
