@@ -10,77 +10,93 @@
 // @grant       GM_getValue
 // @grant       GM_setValue
 // ==/UserScript==
-const app = document.getElementById("app");
-const config = { childList: true, subtree: true };
-var showReposts;
-var toggleButtonHandle;
-//Stream and UserStream
-const callback = (mutationList, observer) => {
-    for (const mutation of mutationList) {
-        if (mutation.type === 'childList' && document.querySelector(".stream, .userStream") && !document.getElementById("toggleButton")) {
-            if (document.querySelector(".lazyLoadingList, .soundList")) {
-                document.querySelector(".profileTabs, .stream__header").innerHTML += `<div class ="g-flex-row-centered"><div class="toggleFormControl"><div class="toggleFormControl">
-          <label id="toggleButtonHandle" class="toggle sc-toggle toggleFormControl__toggle sc-mx-1x sc-toggle-active sc-toggle-on">
-            <span class="sc-toggle-handle"></span>
-            <input id="toggleButton" class="sc-toggle-input sc-visuallyhidden" type="checkbox" checked="" aria-required="false">
-          </label>
-          </div>
-          <div class="checkboxFormControl__validation g-input-validation g-input-validation-hidden"></div></div><span style="margin-left:10px"class="sc-ministats sc-ministats-small sc-ministats-reposts soundContext__repost"></span></div>`;
-                document.getElementById("toggleButton").addEventListener("click", toggle);
-                toggleButtonHandle = document.getElementById("toggleButtonHandle");
-                observer.disconnect();
-                showReposts = GM_getValue("showReposts");
-                if(showReposts === 'false') {
-                    toggleButtonHandle.classList.remove("sc-toggle-on");
-                    toggleButtonHandle.classList.remove("sc-toggle-active");
-                    toggleButtonHandle.classList.add("sc-toggle-off");
-                }
-                postObserver.observe(document.querySelector(".userMain, .stream"), config);
-            }
-        }
-    }
-};
-const appObserver = new MutationObserver(callback);
-const postObserver = new MutationObserver(evalReposts);
-appObserver.observe(app, config);
+// ==UserScript==
+// @name        Soundcloud helper
+// @match       https://soundcloud.com/*
+// @grant       GM_getValue
+// @grant       GM_setValue
+// ==/UserScript==
+let streamSelector = '';
+let toggleButtonHandle = null;
 
-function evalReposts() {
-    for (const item of document.querySelectorAll(".soundList__item")) {
-        if (item.querySelector(".soundContext__repost, .sc-ministats-reposts")) {
-            if (showReposts === 'true') {
-                item.style.display = "block";
-            } else {
-                item.style.display = "none";
-            }
-        }
+function waitTillExists(selector, callback) {
+  new MutationObserver(function(mutations) {
+    let element = document.querySelector(selector);
+    if (element) {
+      this.disconnect();
+      callback(element);
     }
+  }).observe(document, {subtree: true, childList: true});
+}
+
+function createButton(location) {
+  location.innerHTML += `<div class ="g-flex-row-centered">
+                             <div class="toggleFormControl">
+                                <div class="toggleFormControl">
+                                   <label id="toggleButtonHandle" class="toggle sc-toggle toggleFormControl__toggle sc-mx-1x sc-toggle-off">
+                                   <span class="sc-toggle-handle"></span>
+                                   <input id="toggleButton" class="sc-toggle-input sc-visuallyhidden" type="checkbox" checked="" aria-required="false">
+                                   </label>
+                                </div>
+                                <div class="checkboxFormControl__validation g-input-validation g-input-validation-hidden"></div>
+                             </div>
+                             <span style="margin-left:10px"class="sc-ministats sc-ministats-small sc-ministats-reposts soundContext__repost"></span>
+                          </div>`;
+  document.getElementById("toggleButton").addEventListener("click", toggle);
+  toggleButtonHandle = document.getElementById("toggleButtonHandle");
+  if(GM_getValue("showReposts")) {
+      toggleButtonHandle.classList.add("sc-toggle-on");
+      toggleButtonHandle.classList.add("sc-toggle-active");
+      toggleButtonHandle.classList.remove("sc-toggle-off");
+  }
+}
+
+function updateReposts(stream) {
+  for (const item of stream.querySelectorAll("li")) {
+    if (item.querySelector(".soundContext__repost,.soundTitle__info")) {
+      let artist = item.querySelector(".soundTitle__usernameText").innerHTML.trim();
+      if (GM_getValue("showReposts")) {
+        item.style.display = "block";
+      } else {
+        item.style.display = "none";
+      }
+    }
+  }
+}
+
+function monitorStream(stream) {
+  new MutationObserver(function(mutations) {
+    updateReposts(stream);
+  }).observe(stream, {subtree: true, childList: true});
 }
 
 function toggle() {
-    if(showReposts === 'false') {
-        toggleButtonHandle.classList.remove("sc-toggle-off");
-        toggleButtonHandle.classList.add("sc-toggle-on");
-        toggleButtonHandle.classList.add("sc-toggle-active");
-        showReposts = 'true';
-    } else {
+    if(GM_getValue("showReposts")) {
         toggleButtonHandle.classList.remove("sc-toggle-on");
         toggleButtonHandle.classList.remove("sc-toggle-active");
         toggleButtonHandle.classList.add("sc-toggle-off");
-        showReposts = 'false';
+        GM_setValue("showReposts",false);
+    } else {
+        toggleButtonHandle.classList.remove("sc-toggle-off");
+        toggleButtonHandle.classList.add("sc-toggle-on");
+        toggleButtonHandle.classList.add("sc-toggle-active");
+        GM_setValue("showReposts",true);
     }
-    GM_setValue("showReposts",showReposts);
-    evalReposts();
+    updateReposts(document.querySelector(streamSelector));
 }
 
-let lastUrl = '';
-new MutationObserver(() => {
-    const url = location.href;
-    if (url !== lastUrl) {
-        lastUrl = url;
-        onUrlChange();
+let previousUrl = '';
+const urlObserver = new MutationObserver(function(mutations) {
+  if (location.href !== previousUrl) {
+    previousUrl = location.href;
+    if (location.href == "https://soundcloud.com/feed") {
+      streamSelector = ".stream__list .lazyLoadingList ul";
+    } else {
+      streamSelector = ".userStream__list ul";
     }
-}).observe(document, {subtree: true, childList: true});
+    waitTillExists(streamSelector, monitorStream);
+    waitTillExists(".profileTabs, .stream__header", createButton);
+  }
+});
 
-function onUrlChange() {
-    appObserver.observe(app, config);
-}
+urlObserver.observe(document, {subtree: true, childList: true});
