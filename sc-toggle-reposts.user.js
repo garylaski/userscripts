@@ -25,7 +25,6 @@ function waitTillExists(selector, callback) {
 }
 
 function createButton(location) {
-  console.log("called");
   location.innerHTML += `<div class ="g-flex-row-centered">
                              <div class="toggleFormControl">
                                 <div class="toggleFormControl">
@@ -50,7 +49,6 @@ function createButton(location) {
 function updateReposts(stream) {
   for (const item of stream.querySelectorAll("li")) {
     if (item.querySelector(".soundContext__repost,.soundTitle__info")) {
-      let artist = item.querySelector(".soundTitle__usernameText").innerHTML.trim();
       if (GM_getValue("showReposts")) {
         item.style.display = "block";
       } else {
