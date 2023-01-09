@@ -46,6 +46,7 @@ function convertReleaseTypes(type) {
 function addToForm(form, value, name) {
   form.innerHTML += `<input type='hidden' value='${value}' name='${name}'/>`;
 }
+
 function submitRelease() {
   var soundcloudAlbumData;
   GM_xmlhttpRequest({
@@ -60,7 +61,8 @@ function submitRelease() {
 
       // Process data
       let soundcloudAlbumData = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0])[8].data;
-
+      // Edit note
+      addToForm(mbForm, location.href + "\n--\nSoundCloud: MusicBrainz import\nhttps://github.com/garylaski/userscripts", "edit_note");
       // Release title
       addToForm(mbForm, soundcloudAlbumData.title, "name");
       addToForm(mbForm, "official", "status");
@@ -103,23 +105,42 @@ function submitRelease() {
           // Open menu to go to release?
           return;
         } else {
-          let i = 0;
-          soundcloudAlbumData.tracks.forEach(function (track) {
-              addToForm(mbForm, i, `mediums.0.track.${i}.number`);
-              addToForm(mbForm, track.title, `mediums.0.track.${i}.name`);
-              addToForm(mbForm, track.duration, `mediums.0.track.${i}.length`);
-              addToForm(mbForm, track.user.username, `mediums.0.track.${i}.artist_credit.names.0.name`);
-              addToForm(mbForm, track.user.username, `mediums.0.track.${i}.artist_credit.names.0.artist.name`);
-              i++;
+          //need to let all tracks load
+          let trackNodeList = document.querySelectorAll(".trackItem");
+          let promises = [];
+          trackNodeList.forEach(function (track) {
+              let p = new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                  url: track.querySelector(".trackItem__trackTitle").href,
+                  method: "GET",
+                  onload: function(response) {
+                    let soundcloudTrackData = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0])[8].data;
+                    let trackNumber = track.querySelector(".trackItem__number").innerHTML.trim() - 1;
+                    addToForm(mbForm, trackNumber + 1, `mediums.0.track.${trackNumber}.number`);
+                    addToForm(mbForm, soundcloudTrackData.title, `mediums.0.track.${trackNumber}.name`);
+                    addToForm(mbForm, soundcloudTrackData.duration, `mediums.0.track.${trackNumber}.length`);
+                    addToForm(mbForm, soundcloudTrackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.name`);
+                    addToForm(mbForm, soundcloudTrackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.artist.name`);
+                    resolve(response.responseText);
+                  },
+                  onerror: function(error) {
+                    reject(error);
+                  }
+                });
+              });
+              promises.push(p);
+          });
+
+          Promise.all(promises).then(() => {
+            document.body.appendChild(mbForm);
+            mbForm.submit();
+            document.body.removeChild(mbForm);
           });
         }
       }
-
       // URL
       addToForm(mbForm, location.href, "urls.0.url");
       addToForm(mbForm, 85, "urls.0.link_type");
-      document.body.appendChild(mbForm);
-      mbForm.submit();
     }
   });
 }
@@ -157,7 +178,7 @@ const urlObserver = new MutationObserver(function(mutations) {
     previousUrl = location.href;
     if (location.href.split('/').length > 4 && !waiting) {
       waiting = true;
-      waitTillExists(".listenDetails", createImportButton);
+      waitTillExists(".listenDetails__partialInfo", createImportButton);
     }
   }
 });
