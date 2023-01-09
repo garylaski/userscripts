@@ -15,17 +15,20 @@ let buttonSelector = '';
 let toggleButtonHandle = null;
 
 function waitTillExists(selector, callback) {
-  new MutationObserver(function(mutations) {
-    let element = document.querySelector(selector);
-    if (element) {
-      this.disconnect();
-      callback(element);
-    }
-  }).observe(document, {subtree: true, childList: true});
+    new MutationObserver(function(mutations) {
+        let element = document.querySelector(selector);
+        if (element) {
+            this.disconnect();
+            callback(element);
+        }
+    }).observe(document, {subtree: true, childList: true});
 }
 
 function createButton(location) {
-  location.innerHTML += `<div class ="g-flex-row-centered">
+    if (document.getElementById("toggleButtonHandle")) {
+        return;
+    }
+    location.innerHTML += `<div class ="g-flex-row-centered">
                              <div class="toggleFormControl">
                                 <div class="toggleFormControl">
                                    <label id="toggleButtonHandle" class="toggle sc-toggle toggleFormControl__toggle sc-mx-1x sc-toggle-off">
@@ -37,31 +40,31 @@ function createButton(location) {
                              </div>
                              <span style="margin-left:10px"class="sc-ministats sc-ministats-small sc-ministats-reposts soundContext__repost"></span>
                           </div>`;
-  document.getElementById("toggleButton").addEventListener("click", toggle);
-  toggleButtonHandle = document.getElementById("toggleButtonHandle");
-  if(GM_getValue("showReposts")) {
-      toggleButtonHandle.classList.add("sc-toggle-on");
-      toggleButtonHandle.classList.add("sc-toggle-active");
-      toggleButtonHandle.classList.remove("sc-toggle-off");
-  }
+    document.getElementById("toggleButton").addEventListener("click", toggle);
+    toggleButtonHandle = document.getElementById("toggleButtonHandle");
+    if(GM_getValue("showReposts")) {
+        toggleButtonHandle.classList.add("sc-toggle-on");
+        toggleButtonHandle.classList.add("sc-toggle-active");
+        toggleButtonHandle.classList.remove("sc-toggle-off");
+    }
 }
 
 function updateReposts(stream) {
-  for (const item of stream.querySelectorAll("li")) {
-    if (item.querySelector(".soundContext__repost,.soundTitle__info")) {
-      if (GM_getValue("showReposts")) {
-        item.style.display = "block";
-      } else {
-        item.style.display = "none";
-      }
+    for (const item of stream.querySelectorAll("li")) {
+        if (item.querySelector(".soundContext__repost,.soundTitle__info")) {
+            if (GM_getValue("showReposts")) {
+                item.style.display = "block";
+            } else {
+                item.style.display = "none";
+            }
+        }
     }
-  }
 }
 
 function monitorStream(stream) {
-  new MutationObserver(function(mutations) {
-    updateReposts(stream);
-  }).observe(stream, {subtree: true, childList: true});
+    new MutationObserver(function(mutations) {
+        updateReposts(stream);
+    }).observe(stream, {subtree: true, childList: true});
 }
 
 function toggle() {
@@ -81,18 +84,18 @@ function toggle() {
 
 let previousUrl = '';
 const urlObserver = new MutationObserver(function(mutations) {
-  if (location.href !== previousUrl) {
-    previousUrl = location.href;
-    if (location.href == "https://soundcloud.com/feed") {
-      streamSelector = ".stream__list .lazyLoadingList ul";
-      buttonSelector = ".stream__header";
-    } else {
-      streamSelector = ".userStream__list ul";
-      buttonSelector = ".profileTabs";
+    if (location.href !== previousUrl) {
+        previousUrl = location.href;
+        if (location.href == "https://soundcloud.com/feed") {
+            streamSelector = ".stream__list .lazyLoadingList ul";
+            buttonSelector = ".stream__header";
+        } else {
+            streamSelector = ".userStream__list ul";
+            buttonSelector = ".profileTabs";
+        }
+        waitTillExists(streamSelector, monitorStream);
+        waitTillExists(buttonSelector, createButton);
     }
-    waitTillExists(streamSelector, monitorStream);
-    waitTillExists(buttonSelector, createButton);
-  }
 });
 
 urlObserver.observe(document, {subtree: true, childList: true});
