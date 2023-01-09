@@ -13,6 +13,10 @@
 // @grant       GM_addStyle
 // ==/UserScript==
 GM_addStyle (`
+  .dashbox {
+    padding-bottom: 4px;
+    margin-bottom: 5px;
+  }
   .sc-button-medium.sc-button-mb:before {
     background-image: url("https://musicbrainz.org/favicon.ico");
     background-size: 14px 14px;
@@ -178,7 +182,7 @@ const urlObserver = new MutationObserver(function(mutations) {
     previousUrl = location.href;
     if (location.href.split('/').length > 4 && !waiting) {
       waiting = true;
-      waitTillExists(".listenDetails__partialInfo", createImportButton);
+      waitTillExists(".dashbox", createImportButton);
     }
   }
 });
