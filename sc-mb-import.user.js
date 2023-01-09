@@ -126,7 +126,7 @@ function submitRelease() {
 
 function createImportButton(parent) {
   if (parent.querySelector(".sc-button-mb")) {
-    return false;
+    return;
   }
   GM_xmlhttpRequest({
     url: "https://musicbrainz.org/ws/2/url?fmt=json&resource="+location.href,
@@ -135,13 +135,13 @@ function createImportButton(parent) {
     onload: function(response) {
       var importButton;
       if(response.response.error) {
-        importButton = `<button title="MB Import" aria-label="MB Import" class="sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive sc-button-mb">Import</button>`;
-        parent.innerHTML += (importButton);
+        importButton = `<button title="MB Import" class="sc-button-mb sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive">Import</button>`;
+        parent.innerHTML = importButton + parent.innerHTML;
         parent.querySelector(".sc-button-mb").addEventListener("click",submitRelease);
       } else {
         let mbid = response.response.id;
-        importButton = `<button title="MB Entry" aria-label="MB Entry" class="sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive sc-button-mb">Open</button>`;
-        parent.innerHTML += (importButton);
+        importButton = `<button title="MB Entry" class="sc-button-mb sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive">Open</button>`;
+        parent.innerHTML = importButton + parent.innerHTML;
         parent.querySelector(".sc-button-mb").addEventListener("click", function() {
             window.open("https://musicbrainz.org/url/"+mbid)
         });
@@ -157,7 +157,7 @@ const urlObserver = new MutationObserver(function(mutations) {
     previousUrl = location.href;
     if (location.href.split('/').length > 4 && !waiting) {
       waiting = true;
-      waitTillExists(".listenEngagement__footer .listenEngagement__actions .sc-button-group", createImportButton);
+      waitTillExists(".listenDetails", createImportButton);
     }
   }
 });
