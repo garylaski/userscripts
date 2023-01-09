@@ -1,131 +1,36 @@
 // ==UserScript==
-// @name        Import Soundcloud to MusicBrainz
-// @description Add a button on Soundcloud track and album pages to open MusicBrainz release editor with pre-filled data
+// @name        SoundCloud: MusicBrainz import
+// @description Import SoundCloud releases into MusicBrainz.
+// @version     2022.12.13
+// @author      garylaski
+// @namespace   https://github.com/garylaski/userscripts
 // @match       https://soundcloud.com/*/*
 // @match       https://soundcloud.com/*/sets/*
-// @require        https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js
-// @require        https://raw.githubusercontent.com/murdos/musicbrainz-userscripts/master/lib/mbimportstyle.js
-// @require        https://raw.githubusercontent.com/murdos/musicbrainz-userscripts/master/lib/mblinks.js
-// @require        https://raw.githubusercontent.com/murdos/musicbrainz-userscripts/master/lib/mbimport.js
-// @icon           https://raw.githubusercontent.com/murdos/musicbrainz-userscripts/master/assets/images/Musicbrainz_import_logo.png
-// @grant          unsafeWindow
-// @run-at         document-end
+// @match       https://soundcloud.com/*
+// @licence     GPL-3.0-or-later; http://www.gnu.org/licenses/gpl-3.0.txt
+// @run-at      document-end
+// @grant       GM_xmlhttpRequest
+// @grant       GM_addStyle
 // ==/UserScript==
+GM_addStyle (`
+  .sc-button-medium.sc-button-mb:before {
+    background-image: url("https://musicbrainz.org/favicon.ico");
+    background-size: 14px 14px;
+  }
+`);
 
-// eslint-disable-next-line no-global-assign
-if (!unsafeWindow) unsafeWindow = window;
-
-const SoundcloudImport = {
-  retrieveReleaseInfo: function () {
-    let soundcloudAlbumData = unsafeWindow.__sc_hydration[8].data;
-
-    let release = {
-      discs: [],
-      artist_credit: [],
-      barcode: '',
-      title: '',
-      year: 0,
-      month: 0,
-      day: 0,
-      parent_album_url: soundcloudAlbumData.permalink_url,
-      labels: [],
-      format: 'Digital Media',
-      country: 'XW',
-      type: '',
-      status: 'official',
-      packaging: 'None',
-      language: 'eng',
-      script: 'Latn',
-      urls: [],
-      url: soundcloudAlbumData.permalink_url,
-      artist_url: soundcloudAlbumData.user.permalink_url,
-    };
-
-    // Release title
-    release.title = soundcloudAlbumData.title;
-
-    // Date information
-    let date = new Date(soundcloudAlbumData.created_at);
-    release.year = date.getUTCFullYear();
-    release.day = date.getUTCDate();
-    release.month = date.getUTCMonth() + 1;
-
-    // Release type
-    if (soundcloudAlbumData.kind == "track") {
-        // Logic to determine if it is part of a release
-        if (document.querySelectorAll(".sidebarModule")[1].getElementsByClassName("soundBadgeList__item").length == 0) {
-          release.type = "Single";
-        } else {
-          release.type = "track";
-        }
-    } else {
-        release.type = this.convertReleaseTypes(soundcloudAlbumData.set_type);
+function waitTillExists(selector, callback) {
+  new MutationObserver(function(mutations) {
+    let element = document.querySelector(selector);
+    if (element) {
+      this.disconnect();
+      waiting = false;
+      callback(element);
     }
+  }).observe(document, {subtree: true, childList: true});
+}
 
-    // Tracks
-    release.discs = [{
-        tracks: [],
-        format: release.format,
-    }];
-
-    if (release.type == "Single") {
-      release.discs[0].tracks.push({
-          title: release.title,
-          duration: soundcloudAlbumData.duration,
-          artist_credit: release.artist_credit
-      });
-    } else {
-      if (release.type == "track") {
-        release.parent_album_url = document.querySelectorAll(".sidebarModule")[1].querySelector(".soundBadgeList__item").querySelector(".soundTitle__title").href;
-      } else {
-        soundcloudAlbumData.tracks.forEach(function (track) {
-          release.discs[0].tracks.push({
-            title: track.title,
-            duration: track.duration,
-            artist_credit: MBImport.makeArtistCredits([track.user.username]),
-          });
-        });
-      }
-    }
-    // Release artist
-    release.artist_credit = MBImport.makeArtistCredits([soundcloudAlbumData.user.username]);
-    // Label
-    let label = soundcloudAlbumData.label_name;
-    if (label) {
-      release.labels.push({
-        name: label,
-        mbid: '',
-        catno: 'none',
-      });
-    }
-    // URL
-    let link_type = MBImport.URL_TYPES;
-    release.urls.push({
-                      url: release.url,
-                      link_type: link_type.stream_for_free,
-                  });
-    return release;
-  },
-
-  // Inserting links
-  insertLink: function (release) {
-    if (release.type == 'track') {
-        // only import album or single, tracks belong to an album
-        return false;
-    }
-    // Form parameters
-    let edit_note = MBImport.makeEditNote(release.url, 'Soundcloud');
-    let parameters = MBImport.buildFormParameters(release, edit_note);
-    // Build form
-    let importButton = `<div>${MBImport.buildFormHTML(parameters)}</div>`;
-    let searchButton = `<div>${MBImport.buildSearchButton(release)}</div>`;
-    // Append MB import link
-    $(".listenEngagement__actions").append(importButton);
-    $(".listenEngagement__actions").append(searchButton);
-  },
-
-  // Convert between soundcloud and MB release types
-  convertReleaseTypes: function (type) {
+function convertReleaseTypes(type) {
       switch(type) {
         case 'album':
             return 'Album';
@@ -138,26 +43,123 @@ const SoundcloudImport = {
     }
 }
 
+function addToForm(form, value, name) {
+  form.innerHTML += `<input type='hidden' value='${value}' name='${name}'/>`;
+}
+function submitRelease() {
+  var soundcloudAlbumData;
+  GM_xmlhttpRequest({
+    url: location.href,
+    method: "GET",
+    onload: function(response) {
+      // Create form
+      let mbForm = document.createElement("form");
+      mbForm.method = "POST";
+      mbForm.target = "_blank"
+      mbForm.action = "https://musicbrainz.org/release/add"
+
+      // Process data
+      let soundcloudAlbumData = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0])[8].data;
+
+      // Release title
+      addToForm(mbForm, soundcloudAlbumData.title, "name");
+      addToForm(mbForm, "official", "status");
+      addToForm(mbForm, "None", "packaging");
+
+      // Date information
+      let date = new Date(soundcloudAlbumData.created_at);
+      addToForm(mbForm, date.getUTCFullYear(), "date.year");
+      addToForm(mbForm, date.getUTCDate(), "date.day");
+      addToForm(mbForm, date.getUTCMonth() + 1, "date.month");
+      addToForm(mbForm, "XW", "country");
+
+      // Release artist
+      addToForm(mbForm, soundcloudAlbumData.user.username, "artist_credit.names.0.name");
+      addToForm(mbForm, soundcloudAlbumData.user.username, "artist_credit.names.0.artist.name");
+
+      // Release type
+      let type = "track";
+      if (soundcloudAlbumData.kind == "track") {
+          // Logic to determine if it is part of a release
+          if (document.querySelectorAll(".sidebarModule")[1].getElementsByClassName("soundBadgeList__item").length == 0) {
+            type = "Single";
+          }
+      } else {
+          type = convertReleaseTypes(soundcloudAlbumData.set_type);
+      }
+      addToForm(mbForm, type, "type");
+
+      // Tracks
+      addToForm(mbForm, "Digital Media", "mediums.0.format");
+      if (type == "Single") {
+        addToForm(mbForm, "1", "mediums.0.track.0.number");
+        addToForm(mbForm, soundcloudAlbumData.title, "mediums.0.track.0.name");
+        addToForm(mbForm, soundcloudAlbumData.duration, "mediums.0.track.0.length");
+        addToForm(mbForm, soundcloudAlbumData.user.username, "mediums.0.track.0.artist_credit.names.0.name");
+        addToForm(mbForm, soundcloudAlbumData.user.username, "mediums.0.track.0.artist_credit.names.0.artist.name");
+      } else {
+        if (type == "track") {
+          // Unsure how to handle the track only case.
+          // Open menu to go to release?
+          return;
+        } else {
+          let i = 0;
+          soundcloudAlbumData.tracks.forEach(function (track) {
+              addToForm(mbForm, i, `mediums.0.track.${i}.number`);
+              addToForm(mbForm, track.title, `mediums.0.track.${i}.name`);
+              addToForm(mbForm, track.duration, `mediums.0.track.${i}.length`);
+              addToForm(mbForm, track.user.username, `mediums.0.track.${i}.artist_credit.names.0.name`);
+              addToForm(mbForm, track.user.username, `mediums.0.track.${i}.artist_credit.names.0.artist.name`);
+              i++;
+          });
+        }
+      }
+
+      // URL
+      addToForm(mbForm, location.href, "urls.0.url");
+      addToForm(mbForm, 85, "urls.0.link_type");
+      document.body.appendChild(mbForm);
+      mbForm.submit();
+    }
+  });
 }
 
-$(document).ready(function() {
-    // Wait 2 seconds for soundcloud to execute its scripts
-    window.setTimeout(function () {
-      MBImportStyle();
-      let mblinks = new MBLinks('SCI_MBLINKS_CACHE');
-      let release = SoundcloudImport.retrieveReleaseInfo();
-      mblinks.searchAndDisplayMbLink(release.artist_url, 'artist', function (link) {
-        $('.userBadge__actions').append(`<div class="sc-button sc-link" style="top: 4px; max-height:22px">${link}</div>`);
-      });
-      mblinks.searchAndDisplayMbLink(release.parent_album_url, 'release', function (link) {
-          $('.soundActions .sc-button-group .sc-button-like').before(`<div class="sc-button sc-link" style="padding-top: 4px">${link}</div>`);
-      });
-      //Not sure why this is required
-      $(".sc-link a").each(function() {
-          $(this).attr("href", "https:" + $(this).attr("href"));
-      });
+function createImportButton(parent) {
+  if (parent.querySelector(".sc-button-mb")) {
+    return false;
+  }
+  GM_xmlhttpRequest({
+    url: "https://musicbrainz.org/ws/2/url?fmt=json&resource="+location.href,
+    method: "GET",
+    responseType: "json",
+    onload: function(response) {
+      var importButton;
+      if(response.response.error) {
+        importButton = `<button title="MB Import" aria-label="MB Import" class="sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive sc-button-mb">Import</button>`;
+        parent.innerHTML += (importButton);
+        parent.querySelector(".sc-button-mb").addEventListener("click",submitRelease);
+      } else {
+        let mbid = response.response.id;
+        importButton = `<button title="MB Entry" aria-label="MB Entry" class="sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive sc-button-mb">Open</button>`;
+        parent.innerHTML += (importButton);
+        parent.querySelector(".sc-button-mb").addEventListener("click", function() {
+            window.open("https://musicbrainz.org/url/"+mbid)
+        });
+      }
+    }
+  });
+}
 
-
-      SoundcloudImport.insertLink(release);
-    }, 1000);
+let previousUrl = '';
+let waiting = false;
+const urlObserver = new MutationObserver(function(mutations) {
+  if (location.href !== previousUrl) {
+    previousUrl = location.href;
+    if (location.href.split('/').length > 4 && !waiting) {
+      waiting = true;
+      waitTillExists(".listenEngagement__footer .listenEngagement__actions .sc-button-group", createImportButton);
+    }
+  }
 });
+
+urlObserver.observe(document, {subtree: true, childList: true});
