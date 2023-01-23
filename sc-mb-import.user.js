@@ -6,9 +6,7 @@
 // @namespace   https://github.com/garylaski/userscripts
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
 // @updateURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
-// @match       https://*soundcloud.com/*/*
-// @match       https://*soundcloud.com/*/sets/*
-// @match       https://*soundcloud.com/*
+// @match       https://soundcloud.com/*
 // @licence     GPL-3.0-or-later; http://www.gnu.org/licenses/gpl-3.0.txt
 // @run-at      document-end
 // @grant       GM_xmlhttpRequest
