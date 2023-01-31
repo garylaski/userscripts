@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2023.01.11
+// @version     2023.01.31
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -81,7 +81,9 @@ function submitRelease() {
             addToForm(mbForm, "XW", "country");
 
             //Release label
-            addToForm(mbForm, soundcloudAlbumData.label_name, "labels.0.name");
+            if (soundcloudAlbumData.label_name) {
+                addToForm(mbForm, soundcloudAlbumData.label_name, "labels.0.name");
+            }
 
             // Barcode
             if (soundcloudAlbumData.publisher_metadata) {
