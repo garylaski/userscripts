@@ -156,14 +156,25 @@ function submitRelease() {
                     });
                 }
             }
-            // URL
-            addToForm(mbForm, location.href, "urls.0.url");
-            addToForm(mbForm, 85, "urls.0.link_type");
+            let url_count = 0;
+
+            // Stream for free URL
+            addToForm(mbForm, location.href, "urls." + url_count + ".url");
+            addToForm(mbForm, 85, "urls." + url_count + ".link_type");
+            url_count++;
+
+            // Check if downloadable
+            if (soundcloudAlbumData.downloadable) {
+              addToForm(mbForm, location.href, "urls." + url_count + ".url");
+              addToForm(mbForm, 75, "urls." + url_count + ".link_type");
+              url_count++;
+            }
 
             // License URL
             if (soundcloudAlbumData.license != 'all-rights-reserved') {
-                addToForm(mbForm, convertLicense(soundcloudAlbumData.license), "urls.1.url");
-                addToForm(mbForm, 301, "urls.1.link_type");
+                addToForm(mbForm, convertLicense(soundcloudAlbumData.license), "urls." + url_count + ".url");
+                addToForm(mbForm, 301, "urls." + url_count + ".link_type");
+                url_count++;
             }
             if (type == "Single") {
                 document.body.appendChild(mbForm);
