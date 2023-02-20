@@ -50,6 +50,7 @@ function convertReleaseTypes(type) {
 }
 
 function addToForm(form, value, name) {
+    value = value.toString().replace("'", '&apos;');
     form.innerHTML += `<input type='hidden' value='${value}' name='${name}'/>`;
 }
 
