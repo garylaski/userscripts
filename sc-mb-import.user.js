@@ -89,7 +89,7 @@ function submitRelease() {
             }
 
             // Barcode
-            if (soundcloudAlbumData.publisher_metadata) {
+            if (soundcloudAlbumData.publisher_metadata && soundcloudAlbumData.publisher_metadata.upc_or_ean) {
                 addToForm(mbForm, soundcloudAlbumData.publisher_metadata.upc_or_ean, "barcode");
             }
 
