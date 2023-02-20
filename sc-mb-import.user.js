@@ -159,6 +159,12 @@ function submitRelease() {
             // URL
             addToForm(mbForm, location.href, "urls.0.url");
             addToForm(mbForm, 85, "urls.0.link_type");
+
+            // License URL
+            if (soundcloudAlbumData.license != 'all-rights-reserved') {
+                addToForm(mbForm, convertLicense(soundcloudAlbumData.license), "urls.1.url");
+                addToForm(mbForm, 301, "urls.1.link_type");
+            }
             if (type == "Single") {
                 document.body.appendChild(mbForm);
                 mbForm.submit();
