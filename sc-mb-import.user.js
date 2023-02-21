@@ -48,6 +48,10 @@ function convertReleaseTypes(type) {
             return 'Other';
     }
 }
+function convertLicese(license) {
+    license = license.split('cc-')[1];
+    return "https://creativecommons.org/licenses/" + license + "/4.0/";
+}
 
 function addToForm(form, value, name) {
     value = value.toString().replace("'", '&apos;');
