@@ -93,7 +93,7 @@ function submitRelease() {
             }
 
             // Release type
-            let type = convertReleaseTypes(neteaseAlbumData.set_type);
+            let type = convertReleaseTypes(neteaseAlbumData.type);
             addToForm(mbForm, type, "type");
 
             // Tracks
