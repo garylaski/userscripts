@@ -55,7 +55,6 @@ function addToForm(form, value, name) {
 }
 function submitRelease() {
     var soundcloudAlbumData;
-    let albumid =
     GM_xmlhttpRequest({
         url: "https://music.163.com/api/album/" + window.location.href.split('?id=')[1],
         method: "GET",
