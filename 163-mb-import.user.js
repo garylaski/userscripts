@@ -28,9 +28,7 @@ GM_addStyle (`
 function waitTillExists(selector, callback) {
     new MutationObserver(function(mutations) {
         let element = document.querySelector(selector);
-        console.log(element);
         if (element) {
-            console.log("found");
             this.disconnect();
             waiting = false;
             callback(element);
@@ -52,7 +50,6 @@ function convertReleaseTypes(type) {
 }
 
 function addToForm(form, value, name) {
-    console.log(value);
     value = value.toString().replace("'", '&apos;');
     form.innerHTML += `<input type='hidden' value='${value}' name='${name}'/>`;
 }
@@ -70,7 +67,6 @@ function submitRelease() {
 
             // Process data
             let neteaseAlbumData = JSON.parse(response.responseText).album;
-            console.log(neteaseAlbumData.name);
             // Edit note
             addToForm(mbForm, location.href + "\n--\nNetease: MusicBrainz import\nhttps://github.com/garylaski/userscripts", "edit_note");
 
@@ -118,6 +114,7 @@ function submitRelease() {
             addToForm(mbForm, location.href, "urls." + url_count + ".url");
             addToForm(mbForm, 85, "urls." + url_count + ".link_type");
             url_count++;
+            console.log(neteaseAlbumData.picUrl);
 
             document.body.appendChild(mbForm);
             mbForm.submit();
@@ -126,9 +123,7 @@ function submitRelease() {
     });
 }
 function createImportButton(parent) {
-    console.log("creating import button");
     if (parent.querySelector(".u-btni-mb")) {
-        console.log("already exists");
         return;
     }
     GM_xmlhttpRequest({
@@ -140,13 +135,11 @@ function createImportButton(parent) {
             if(response.response.error) {
               importButton = `<a title="MB Import" class="u-btni u-btni-mb"><i>Import</i></a>`;
                 parent.innerHTML = importButton + parent.innerHTML;
-                console.log("created");
                 parent.querySelector(".u-btni-mb").addEventListener("click",submitRelease);
             } else {
                 let mbid = response.response.id;
                 importButton = `<a title="MB Entry" class="u-btni u-btni-mb"><i>Open</i></a>`;
                 parent.innerHTML = importButton + parent.innerHTML;
-                console.log("created");
                 parent.querySelector(".u-btni-mb").addEventListener("click", function() {
                     window.open("https://musicbrainz.org/url/"+mbid)
                 });
@@ -160,9 +153,7 @@ let waiting = false;
 const urlObserver = new MutationObserver(function(mutations) {
     if (location.href !== previousUrl) {
         previousUrl = location.href;
-        console.log("newurl");
         if (!waiting) {
-            console.log("waiting");
             waiting = true;
             waitTillExists("#content-operation", createImportButton);
         }
