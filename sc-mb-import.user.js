@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2023.01.31
+// @version     2023.03.23
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -48,7 +48,7 @@ function convertReleaseTypes(type) {
             return 'Other';
     }
 }
-function convertLicese(license) {
+function convertLicense(license) {
     license = license.split('cc-')[1];
     return "https://creativecommons.org/licenses/" + license + "/4.0/";
 }
