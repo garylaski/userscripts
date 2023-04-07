@@ -37,7 +37,6 @@ function waitTillExists(selector, callback) {
 }
 
 function convertReleaseTypes(type) {
-    console.log({ type })
     switch(type) {
         case 'album':
             return 'Album';
@@ -60,7 +59,6 @@ function addToForm(form, value, name) {
 }
 
 function submitRelease() {
-    console.log('submitting');
     var soundcloudAlbumData;
     GM_xmlhttpRequest({
         url: location.href,
