@@ -71,7 +71,7 @@ function submitRelease() {
             mbForm.action = "https://musicbrainz.org/release/add"
 
             // Process data
-            let soundcloudAlbumData = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0])[8].data;
+            let soundcloudAlbumData = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0]).find(x => x.hydratable === 'sound').data;
 
             // Edit note
             addToForm(mbForm, location.href + "\n--\nSoundCloud: MusicBrainz import\nhttps://github.com/garylaski/userscripts", "edit_note");
