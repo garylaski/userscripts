@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        NetEase: MusicBrainz import
 // @description Import NetEase releases into MusicBrainz.
-// @version     2023.03.16
+// @version     2023.04.15
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/163-mb-import.user.js
@@ -54,9 +54,18 @@ function addToForm(form, value, name) {
     form.innerHTML += `<input type='hidden' value='${value}' name='${name}'/>`;
 }
 function submitRelease() {
-    var soundcloudAlbumData;
+    var soundcloudAlbumData, apiUrl;
+    let id = window.location.href.split('?id=')[1];
+    switch(urlType) {
+        case 'song':
+            apiUrl = "http://music.163.com/api/song/detail?ids=[" + id + "]";
+            break;
+        case 'album':
+            apiUrl = "https://music.163.com/api/album/" + id;
+            break;
+    }
     GM_xmlhttpRequest({
-        url: "https://music.163.com/api/album/" + window.location.href.split('?id=')[1],
+        url: apiUrl,
         method: "GET",
         onload: function(response) {
             let mbForm = document.createElement("form");
@@ -65,7 +74,15 @@ function submitRelease() {
             mbForm.action = "https://musicbrainz.org/release/add"
 
             // Process data
-            let neteaseAlbumData = JSON.parse(response.responseText).album;
+            var neteaseAlbumData;
+            switch(urlType) {
+                case 'song':
+                    neteaseAlbumData = JSON.parse(response.responseText).songs[0];
+                    break;
+                case 'album':
+                    neteaseAlbumData = JSON.parse(response.responseText).album;
+                    break;
+            }
             // Edit note
             addToForm(mbForm, location.href + "\n--\nNetease: MusicBrainz import\nhttps://github.com/garylaski/userscripts", "edit_note");
 
@@ -75,11 +92,13 @@ function submitRelease() {
             addToForm(mbForm, "None", "packaging");
 
             // Date information
-            let date = new Date(neteaseAlbumData.publishTime);
-            addToForm(mbForm, date.getUTCFullYear(), "date.year");
-            addToForm(mbForm, date.getUTCDate(), "date.day");
-            addToForm(mbForm, date.getUTCMonth() + 1, "date.month");
-            addToForm(mbForm, "XW", "country");
+            if (urlType == "album") {
+                let date = new Date(neteaseAlbumData.publishTime);
+                addToForm(mbForm, date.getUTCFullYear(), "date.year");
+                addToForm(mbForm, date.getUTCDate(), "date.day");
+                addToForm(mbForm, date.getUTCMonth() + 1, "date.month");
+                addToForm(mbForm, "XW", "country");
+            }
 
             //Release label
             if (neteaseAlbumData.company) {
@@ -88,8 +107,11 @@ function submitRelease() {
 
             // Release artist
             for (var i = 0; i < neteaseAlbumData.artists.length; i++) {
-              addToForm(mbForm, neteaseAlbumData.artists[i].name, `artist_credit.names.${i}.name`);
-              addToForm(mbForm, neteaseAlbumData.artists[i].name, `artist_credit.names.${i}.artist.name`);
+                addToForm(mbForm, neteaseAlbumData.artists[i].name, `artist_credit.names.${i}.name`);
+                addToForm(mbForm, neteaseAlbumData.artists[i].name, `artist_credit.names.${i}.artist.name`);
+                if (i < neteaseAlbumData.artists.length - 1) {
+                    addToForm(mbForm, " / ", `artist_credit.names.${i}.join_phrase`);
+                }
             }
 
             // Release type
@@ -98,15 +120,35 @@ function submitRelease() {
 
             // Tracks
             addToForm(mbForm, "Digital Media", "mediums.0.format");
-            for (var i = 0; i < neteaseAlbumData.songs.length; i++) {
-              addToForm(mbForm, i + 1, `mediums.0.track.${i}.number`);
-              addToForm(mbForm, neteaseAlbumData.songs[i].name, `mediums.0.track.${i}.name`);
-              addToForm(mbForm, neteaseAlbumData.songs[i].duration, `mediums.0.track.${i}.length`);
-              for (var j = 0; j < neteaseAlbumData.songs[i].artists.length; j++) {
-                addToForm(mbForm, neteaseAlbumData.songs[i].artists[j].name, `mediums.0.track.${i}.artist_credit.names.${j}.name`);
-                addToForm(mbForm, neteaseAlbumData.songs[i].artists[j].name, `mediums.0.track.${i}.artist_credit.names.${j}.artist.name`);
-              }
+            switch(urlType) {
+                case 'song':
+                    addToForm(mbForm, 1, `mediums.0.track.0.number`);
+                    addToForm(mbForm, neteaseAlbumData.name, `mediums.0.track.0.name`);
+                    addToForm(mbForm, neteaseAlbumData.duration, `mediums.0.track.0.length`);
+                    for (var j = 0; j < neteaseAlbumData.artists.length; j++) {
+                        addToForm(mbForm, neteaseAlbumData.artists[j].name, `mediums.0.track.0.artist_credit.names.${j}.name`);
+                        addToForm(mbForm, neteaseAlbumData.artists[j].name, `mediums.0.track.0.artist_credit.names.${j}.artist.name`);
+                        if (j < neteaseAlbumData.artists.length - 1) {
+                            addToForm(mbForm, " / ", `mediums.0.track.0.artist_credit.names.${j}.join_phrase`);
+                        }
+                    }
+                    break;
+                case 'album':
+                    for (var i = 0; i < neteaseAlbumData.songs.length; i++) {
+                        addToForm(mbForm, i + 1, `mediums.0.track.${i}.number`);
+                        addToForm(mbForm, neteaseAlbumData.songs[i].name, `mediums.0.track.${i}.name`);
+                        addToForm(mbForm, neteaseAlbumData.songs[i].duration, `mediums.0.track.${i}.length`);
+                        for (var j = 0; j < neteaseAlbumData.songs[i].artists.length; j++) {
+                            addToForm(mbForm, neteaseAlbumData.songs[i].artists[j].name, `mediums.0.track.${i}.artist_credit.names.${j}.name`);
+                            addToForm(mbForm, neteaseAlbumData.songs[i].artists[j].name, `mediums.0.track.${i}.artist_credit.names.${j}.artist.name`);
+                            if (j < neteaseAlbumData.artists.length - 1) {
+                                addToForm(mbForm, " / ", `mediums.0.track.${i}.artist_credit.names.${j}.join_phrase`);
+                            }
+                        }
+                    }
+                    break;
             }
+
             let url_count = 0;
 
             // Stream for free URL
@@ -132,7 +174,7 @@ function createImportButton(parent) {
         onload: function(response) {
             var importButton;
             if(response.response.error) {
-              importButton = `<a title="MB Import" class="u-btni u-btni-mb"><i>Import</i></a>`;
+                importButton = `<a title="MB Import" class="u-btni u-btni-mb"><i>Import</i></a>`;
                 parent.innerHTML = importButton + parent.innerHTML;
                 parent.querySelector(".u-btni-mb").addEventListener("click",submitRelease);
             } else {
@@ -148,11 +190,13 @@ function createImportButton(parent) {
 }
 
 let previousUrl = '';
+let urlType = '';
 let waiting = false;
 const urlObserver = new MutationObserver(function(mutations) {
     if (location.href !== previousUrl) {
         previousUrl = location.href;
-        if (!waiting) {
+        if (!waiting && location.href.split('/')[3] != '#') {
+            urlType = location.href.split('/')[3].split('?')[0];
             waiting = true;
             waitTillExists("#content-operation", createImportButton);
         }
@@ -160,3 +204,4 @@ const urlObserver = new MutationObserver(function(mutations) {
 });
 
 urlObserver.observe(document, {subtree: true, childList: true})
+
