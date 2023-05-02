@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2023.03.23
+// @version     2023.04.02
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -54,7 +54,7 @@ function convertLicense(license) {
 }
 
 function addToForm(form, value, name) {
-    value = value.toString().replace("'", '&apos;');
+    value = value.toString().replaceAll("'", '&apos;');
     form.innerHTML += `<input type='hidden' value='${value}' name='${name}'/>`;
 }
 
