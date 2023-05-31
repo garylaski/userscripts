@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2023.05.30.1
+// @version     2023.05.30.2
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -126,8 +126,10 @@ function submitRelease() {
                 addToForm(mbForm, soundcloudAlbumData.user.username, "mediums.0.track.0.artist_credit.names.0.artist.name");
             } else {
                 if (type == "track") {
-                    // Unsure how to handle the track only case.
-                    // Open menu to go to release?
+                    document.querySelector(".sc-button-mb").innerHTML = "Go To Release";
+                    document.querySelector(".sc-button-mb").addEventListener("click", function() {
+                      location.href = document.querySelectorAll(".sidebarModule")[1].getElementsByClassName("soundBadgeList__item")[0].querySelector(".sc-link-primary").href;
+                    });
                     return;
                 } else {
                     //need to let all tracks load
