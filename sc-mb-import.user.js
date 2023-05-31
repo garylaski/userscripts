@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2023.05.30
+// @version     2023.05.30.1
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -17,11 +17,13 @@
 GM_addStyle (`
   .dashbox {
     padding-bottom: 4px;
-    margin-bottom: 5px;
   }
   .sc-button-medium.sc-button-mb:before {
     background-image: url("https://musicbrainz.org/favicon.ico");
     background-size: 14px 14px;
+  }
+  .sc-button-medium.sc-button-mb {
+    margin-bottom: 10px;
   }
 `);
 
@@ -223,7 +225,7 @@ const urlObserver = new MutationObserver(function(mutations) {
         previousUrl = location.href;
         if (location.href.split('/').length > 4 && !waiting) {
             waiting = true;
-            waitTillExists(".dashbox", createImportButton);
+            waitTillExists(".dashbox, .listenNetworkSidebar__creator", createImportButton);
         }
     }
 });
