@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2023.05.30.2
+// @version     2023.08.18
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -84,7 +84,7 @@ function submitRelease() {
             addToForm(mbForm, "None", "packaging");
 
             // Date information
-            let date = new Date(soundcloudAlbumData.created_at);
+            let date = new Date(soundcloudAlbumData.display_date);
             addToForm(mbForm, date.getUTCFullYear(), "date.year");
             addToForm(mbForm, date.getUTCDate(), "date.day");
             addToForm(mbForm, date.getUTCMonth() + 1, "date.month");
