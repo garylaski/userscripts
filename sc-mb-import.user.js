@@ -15,17 +15,17 @@
 // @grant       GM_addStyle
 // ==/UserScript==
 GM_addStyle (`
-  .dashbox {
-    padding-bottom: 4px;
-  }
-  .sc-button-medium.sc-button-mb:before {
-    background-image: url("https://musicbrainz.org/favicon.ico");
-    background-size: 14px 14px;
-  }
-  .sc-button-medium.sc-button-mb {
-    margin-bottom: 10px;
-  }
-`);
+    .dashbox {
+        padding-bottom: 4px;
+    }
+    .sc-button-medium.sc-button-mb:before {
+        background-image: url("https://musicbrainz.org/favicon.ico");
+        background-size: 14px 14px;
+    }
+    .sc-button-medium.sc-button-mb {
+        margin-bottom: 10px;
+    }
+    `);
 
 function waitTillExists(selector, callback) {
     new MutationObserver(function(mutations) {
@@ -105,66 +105,59 @@ function submitRelease() {
             addToForm(mbForm, soundcloudAlbumData.user.username, "artist_credit.names.0.artist.name");
 
             // Release type
-            let type = "track";
             if (soundcloudAlbumData.kind == "track") {
                 // Logic to determine if it is part of a release
                 if (document.querySelectorAll(".sidebarModule")[1].getElementsByClassName("soundBadgeList__item").length == 0) {
-                    type = "Single";
-                }
-            } else {
-                type = convertReleaseTypes(soundcloudAlbumData.set_type);
-            }
-            addToForm(mbForm, type, "type");
-
-            // Tracks
-            addToForm(mbForm, "Digital Media", "mediums.0.format");
-            if (type == "Single") {
-                addToForm(mbForm, "1", "mediums.0.track.0.number");
-                addToForm(mbForm, soundcloudAlbumData.title, "mediums.0.track.0.name");
-                addToForm(mbForm, soundcloudAlbumData.duration, "mediums.0.track.0.length");
-                addToForm(mbForm, soundcloudAlbumData.user.username, "mediums.0.track.0.artist_credit.names.0.name");
-                addToForm(mbForm, soundcloudAlbumData.user.username, "mediums.0.track.0.artist_credit.names.0.artist.name");
-            } else {
-                if (type == "track") {
+                    addToForm(mbForm, "1", "mediums.0.track.0.number");
+                    addToForm(mbForm, soundcloudAlbumData.title, "mediums.0.track.0.name");
+                    addToForm(mbForm, soundcloudAlbumData.duration, "mediums.0.track.0.length");
+                    addToForm(mbForm, soundcloudAlbumData.user.username, "mediums.0.track.0.artist_credit.names.0.name");
+                    addToForm(mbForm, soundcloudAlbumData.user.username, "mediums.0.track.0.artist_credit.names.0.artist.name");
+                    // Assuming tracks not part of releases are singles
+                    addToForm(mbForm, "Single", "type");
+                } else {
                     document.querySelector(".sc-button-mb").innerHTML = "Go To Release";
                     document.querySelector(".sc-button-mb").addEventListener("click", function() {
-                      location.href = document.querySelectorAll(".sidebarModule")[1].getElementsByClassName("soundBadgeList__item")[0].querySelector(".sc-link-primary").href;
+                        location.href = document.querySelectorAll(".sidebarModule")[1].getElementsByClassName("soundBadgeList__item")[0].querySelector(".sc-link-primary").href;
                     });
                     return;
-                } else {
-                    //need to let all tracks load
-                    let trackNodeList = document.querySelectorAll(".trackItem");
-                    let promises = [];
-                    trackNodeList.forEach(function (track) {
-                        let p = new Promise((resolve, reject) => {
-                            GM_xmlhttpRequest({
-                                url: track.querySelector(".trackItem__trackTitle").href,
-                                method: "GET",
-                                onload: function(response) {
-                                    let soundcloudTrackData = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0])[8].data;
-                                    let trackNumber = track.querySelector(".trackItem__number").innerHTML.trim() - 1;
-                                    addToForm(mbForm, trackNumber + 1, `mediums.0.track.${trackNumber}.number`);
-                                    addToForm(mbForm, soundcloudTrackData.title, `mediums.0.track.${trackNumber}.name`);
-                                    addToForm(mbForm, soundcloudTrackData.duration, `mediums.0.track.${trackNumber}.length`);
-                                    addToForm(mbForm, soundcloudTrackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.name`);
-                                    addToForm(mbForm, soundcloudTrackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.artist.name`);
-                                    resolve(response.responseText);
-                                },
-                                onerror: function(error) {
-                                    reject(error);
-                                }
-                            });
-                        });
-                        promises.push(p);
-                    });
-
-                    Promise.all(promises).then(() => {
-                        document.body.appendChild(mbForm);
-                        mbForm.submit();
-                        document.body.removeChild(mbForm);
-                    });
                 }
+            } else {
+                let type = convertReleaseTypes(soundcloudAlbumData.set_type);
+                addToForm(mbForm, type, "type");
+                let trackNodeList = document.querySelectorAll(".trackItem");
+                let promises = [];
+                trackNodeList.forEach(function (track) {
+                    let p = new Promise((resolve, reject) => {
+                        GM_xmlhttpRequest({
+                            url: track.querySelector(".trackItem__trackTitle").href,
+                            method: "GET",
+                            onload: function(response) {
+                                let soundcloudTrackData = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0])[8].data;
+                                let trackNumber = track.querySelector(".trackItem__number").innerHTML.trim() - 1;
+                                addToForm(mbForm, trackNumber + 1, `mediums.0.track.${trackNumber}.number`);
+                                addToForm(mbForm, soundcloudTrackData.title, `mediums.0.track.${trackNumber}.name`);
+                                addToForm(mbForm, soundcloudTrackData.duration, `mediums.0.track.${trackNumber}.length`);
+                                addToForm(mbForm, soundcloudTrackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.name`);
+                                addToForm(mbForm, soundcloudTrackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.artist.name`);
+                                resolve(response.responseText);
+                            },
+                            onerror: function(error) {
+                                reject(error);
+                            }
+                        });
+                    });
+                    promises.push(p);
+                });
+
+                Promise.all(promises).then(() => {
+                    document.body.appendChild(mbForm);
+                    mbForm.submit();
+                    document.body.removeChild(mbForm);
+                });
             }
+            addToForm(mbForm, "Digital Media", "mediums.0.format");
+
             let url_count = 0;
 
             // Stream for free URL
@@ -174,9 +167,9 @@ function submitRelease() {
 
             // Check if downloadable
             if (soundcloudAlbumData.downloadable) {
-              addToForm(mbForm, location.href, "urls." + url_count + ".url");
-              addToForm(mbForm, 75, "urls." + url_count + ".link_type");
-              url_count++;
+                addToForm(mbForm, location.href, "urls." + url_count + ".url");
+                addToForm(mbForm, 75, "urls." + url_count + ".link_type");
+                url_count++;
             }
 
             // License URL
@@ -185,7 +178,7 @@ function submitRelease() {
                 addToForm(mbForm, 301, "urls." + url_count + ".link_type");
                 url_count++;
             }
-            if (type == "Single") {
+            if (soundcloudAlbumData.kind == "track") {
                 document.body.appendChild(mbForm);
                 mbForm.submit();
                 document.body.removeChild(mbForm);
