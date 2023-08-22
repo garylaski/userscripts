@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2023.08.18
+// @version     2023.08.22
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -60,6 +60,25 @@ function addToForm(form, value, name) {
     form.innerHTML += `<input type='hidden' value='${value}' name='${name}'/>`;
 }
 
+function addArtistMBID(form, url, tag) {
+  return new Promise((resolve, reject) => {
+    GM_xmlhttpRequest({
+          url: "https://musicbrainz.org/ws/2/url?limit=1&targettype=artist&fmt=json&query="+url,
+          method: "GET",
+          responseType: "json",
+          onload: function(response) {
+              if(!response.response.error && response.response.urls[0].resource == url) {
+                  addToForm(form, response.response.urls[0]["relation-list"][0].relations[0].artist.id, tag);
+              }
+              resolve(response.responseText);
+          },
+          onerror: function(error) {
+              reject(error);
+          }
+      });
+  });
+}
+
 function submitRelease() {
     var soundcloudAlbumData;
     GM_xmlhttpRequest({
@@ -68,6 +87,7 @@ function submitRelease() {
         onload: function(response) {
             // Create form
             let mbForm = document.createElement("form");
+            let promises = [];
             mbForm.method = "POST";
             mbForm.target = "_blank"
             mbForm.action = "https://musicbrainz.org/release/add"
@@ -103,6 +123,7 @@ function submitRelease() {
             // Release artist
             addToForm(mbForm, soundcloudAlbumData.user.username, "artist_credit.names.0.name");
             addToForm(mbForm, soundcloudAlbumData.user.username, "artist_credit.names.0.artist.name");
+            promises.push(addArtistMBID(mbForm, soundcloudAlbumData.user.permalink_url, "artist_credit.names.0.mbid"));
 
             // Release type
             if (soundcloudAlbumData.kind == "track") {
@@ -113,6 +134,7 @@ function submitRelease() {
                     addToForm(mbForm, soundcloudAlbumData.duration, "mediums.0.track.0.length");
                     addToForm(mbForm, soundcloudAlbumData.user.username, "mediums.0.track.0.artist_credit.names.0.name");
                     addToForm(mbForm, soundcloudAlbumData.user.username, "mediums.0.track.0.artist_credit.names.0.artist.name");
+                    promises.push(addArtistMBID(mbForm, soundcloudAlbumData.user.permalink_url, "mediums.0.track.0.artist_credit.names.0.mbid"));
                     // Assuming tracks not part of releases are singles
                     addToForm(mbForm, "Single", "type");
                 } else {
@@ -126,7 +148,6 @@ function submitRelease() {
                 let type = convertReleaseTypes(soundcloudAlbumData.set_type);
                 addToForm(mbForm, type, "type");
                 let trackNodeList = document.querySelectorAll(".trackItem");
-                let promises = [];
                 trackNodeList.forEach(function (track) {
                     let p = new Promise((resolve, reject) => {
                         GM_xmlhttpRequest({
@@ -140,6 +161,7 @@ function submitRelease() {
                                 addToForm(mbForm, soundcloudTrackData.duration, `mediums.0.track.${trackNumber}.length`);
                                 addToForm(mbForm, soundcloudTrackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.name`);
                                 addToForm(mbForm, soundcloudTrackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.artist.name`);
+                                promises.push(addArtistMBID(mbForm, soundcloudTrackData.user.permalink_url, `mediums.0.track.${trackNumber}.artist_credit.names.0.mbid`));
                                 resolve(response.responseText);
                             },
                             onerror: function(error) {
@@ -148,12 +170,6 @@ function submitRelease() {
                         });
                     });
                     promises.push(p);
-                });
-
-                Promise.all(promises).then(() => {
-                    document.body.appendChild(mbForm);
-                    mbForm.submit();
-                    document.body.removeChild(mbForm);
                 });
             }
             addToForm(mbForm, "Digital Media", "mediums.0.format");
@@ -178,11 +194,11 @@ function submitRelease() {
                 addToForm(mbForm, 301, "urls." + url_count + ".link_type");
                 url_count++;
             }
-            if (soundcloudAlbumData.kind == "track") {
+            Promise.all(promises).then(() => {
                 document.body.appendChild(mbForm);
                 mbForm.submit();
                 document.body.removeChild(mbForm);
-            }
+            });
         }
     });
 }
