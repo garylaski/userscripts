@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2023.09.30
+// @version     2023.09.30.1
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -63,14 +63,18 @@ function addToForm(form, value, name) {
 function addArtistMBID(form, url, tag) {
   return new Promise((resolve, reject) => {
     GM_xmlhttpRequest({
-          url: "https://musicbrainz.org/ws/2/url?limit=1&targettype=artist&fmt=json&query="+url,
+          url: "https://musicbrainz.org/ws/2/url?limit=1&fmt=json&inc=artist-rels&resource="+url,
           method: "GET",
           responseType: "json",
           onload: function(response) {
-              if(!response.response.error && response.response.urls[0].resource == url) {
-                  addToForm(form, response.response.urls[0]["relation-list"][0].relations[0].artist.id, tag);
+              if(response.response.error) {
+                reject(response.response.error);
+                return;
               }
-              resolve(response.responseText);
+              if (response.response.relations.length > 0) {
+                  addToForm(form, response.response.relations[0].artist.id, tag);
+              }
+              resolve("Success");
           },
           onerror: function(error) {
               reject(error);
@@ -162,7 +166,7 @@ function submitRelease() {
                                 addToForm(mbForm, soundcloudTrackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.name`);
                                 addToForm(mbForm, soundcloudTrackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.artist.name`);
                                 promises.push(addArtistMBID(mbForm, soundcloudTrackData.user.permalink_url, `mediums.0.track.${trackNumber}.artist_credit.names.0.mbid`));
-                                resolve(response.responseText);
+                                resolve("Success");
                             },
                             onerror: function(error) {
                                 reject(error);
@@ -194,10 +198,12 @@ function submitRelease() {
                 addToForm(mbForm, 301, "urls." + url_count + ".link_type");
                 url_count++;
             }
-            Promise.all(promises).then(() => {
+            Promise.all(promises).then((values) => {
                 document.body.appendChild(mbForm);
                 mbForm.submit();
                 document.body.removeChild(mbForm);
+            }).catch((error) => {
+                console.error(error.message);
             });
         }
     });
