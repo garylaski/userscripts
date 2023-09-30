@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2023.08.22
+// @version     2023.09.30
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -154,7 +154,7 @@ function submitRelease() {
                             url: track.querySelector(".trackItem__trackTitle").href,
                             method: "GET",
                             onload: function(response) {
-                                let soundcloudTrackData = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0])[8].data;
+                                let soundcloudTrackData = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0]).find(x => x.hydratable === 'sound').data;
                                 let trackNumber = track.querySelector(".trackItem__number").innerHTML.trim() - 1;
                                 addToForm(mbForm, trackNumber + 1, `mediums.0.track.${trackNumber}.number`);
                                 addToForm(mbForm, soundcloudTrackData.title, `mediums.0.track.${trackNumber}.name`);
