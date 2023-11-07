@@ -1,15 +1,15 @@
 // ==UserScript==
-    // @name        SoundCloud: MusicBrainz import development version
+// @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-    // @version     2023.11.01
+// @version     2023.11.01
 // @author      garylaski
-// @namespace   https://github.com/garylaski/userscripts/tree/dev
-// @downloadURL https://github.com/garylaski/userscripts/raw/dev/sc-mb-import.user.js
-// @updateURL https://github.com/garylaski/userscripts/raw/dev/sc-mb-import.user.js
+// @namespace   https://github.com/garylaski/userscripts/
+// @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
+// @updateURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
 // @homepageURL https://github.com/garylaski/userscripts
 // @supportURL  https://github.com/garylaski/userscripts/issues
 // @match       https://soundcloud.com/*
-    // @licence     GPL-3.0-or-later; http://www.gnu.org/licenses/gpl-3.0.txt
+// @licence     GPL-3.0-or-later; http://www.gnu.org/licenses/gpl-3.0.txt
 // @run-at      document-end
 // @grant       GM_xmlhttpRequest
 // @grant       GM_addStyle
