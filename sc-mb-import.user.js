@@ -67,9 +67,6 @@ async function onUrlChange() {
     } else {
         globalPromises.push(entity.build());
         Promise.all(globalPromises)
-            .then(() => {
-                button.disabled = false;
-            })
             .catch((e) => {
                 button.innerHTML = "ERROR";
                 button.title = e;
@@ -209,6 +206,7 @@ function buildTrack() {
     return new Promise((resolve, reject) => {
         GetTrackSetUrl().then((setUrl) => {
             button.innerHTML = "Go to parent set";
+            button.disabled = false;
             button.addEventListener("click", () => {
                 location.href = setUrl;
             });
@@ -220,6 +218,7 @@ function buildTrack() {
             form.formtarget = "_blank"
             globalPromises.push(trackHydration().then(() => {
                 button.innerHTML = "Import";
+                button.disabled = false;
                 button.appendChild(form);
                 button.removeEventListener("click", submitForm);
                 button.addEventListener("click", submitForm);
@@ -285,6 +284,7 @@ function buildSet() {
         form.formtarget = "_blank"
         globalPromises.push(setHydration().then(() => {
            button.innerHTML = "Import";
+           button.disabled = false;
            button.appendChild(form);
            button.addEventListener("click", submitForm);
         }));
