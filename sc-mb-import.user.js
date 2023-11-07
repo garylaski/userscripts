@@ -1,11 +1,11 @@
 // ==UserScript==
-// @name        SoundCloud: MusicBrainz import
+// @name        SoundCloud: MusicBrainz import development version
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2023.09.30.1
+// @version     2023.11.01
 // @author      garylaski
-// @namespace   https://github.com/garylaski/userscripts
-// @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
-// @updateURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
+// @namespace   https://github.com/garylaski/userscripts/tree/dev
+// @downloadURL https://github.com/garylaski/userscripts/raw/dev/sc-mb-import.user.js
+// @updateURL https://github.com/garylaski/userscripts/raw/dev/sc-mb-import.user.js
 // @homepageURL https://github.com/garylaski/userscripts
 // @supportURL  https://github.com/garylaski/userscripts/issues
 // @match       https://soundcloud.com/*
@@ -27,25 +27,366 @@ GM_addStyle (`
     }
     `);
 
-function waitTillExists(selector, callback) {
-    new MutationObserver(function(mutations) {
-        let element = document.querySelector(selector);
-        if (element) {
-            this.disconnect();
-            waiting = false;
-            callback(element);
-        }
-    }).observe(document, {subtree: true, childList: true});
+let globalPromises = []
+let form, entity, formString;
+let buttonText;
+let previousUrl = '';
+new MutationObserver(function(mutations) {
+  if (location.href !== previousUrl) {
+    previousUrl = location.href;
+    Promise.all(globalPromises).catch(error => {
+      console.log(error);
+    }).finally(() => {
+      globalPromises = [];
+      onUrlChange();
+    });
+  }
+}).observe(document, {subtree: true, childList: true});
+
+async function onUrlChange() {
+  if (!determineEntityType()) {
+    return
+  }
+  formString = "";
+  form = document.createElement("form");
+  globalPromises.push(createButton());
+  let value = await UrlInMusicBrainz(location.href);
+  if (value != null) {
+    Promise.all(globalPromises)
+      .then(() => {
+        button.disabled = false;
+        button.innerHTML = "Open";
+        button.addEventListener("click", () => {
+          window.open(`https://musicbrainz.org/${value[0]}/${value[1]}`);
+        });
+      })
+      .catch((e) => {
+        button.innerHTML = "ERROR";
+        button.title = e;
+        console.error(e);
+      });
+  } else {
+    globalPromises.push(entity.build());
+    Promise.all(globalPromises)
+      .then(() => {
+        button.innerHTML = buttonText;
+        button.appendChild(form);
+        button.removeEventListener("click", submitForm)
+        button.addEventListener("click", submitForm);
+        button.disabled = false;
+      })
+      .catch((e) => {
+        button.innerHTML = "ERROR";
+        button.title = e;
+        console.error(e);
+
+      });
+  }
 }
 
+function submitForm() {
+  form.innerHTML = formString;
+  form.submit();
+}
+
+let button;
+function createButton() {
+  return new Promise(resolve => {
+    if (button != null) {
+      button.remove();
+    }
+    button = document.createElement("button");
+    button.innerHTML = "Loading...";
+    button.disabled = true;
+    button.setAttribute("class", "sc-button-mb sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive");
+    waitForElement(entity.buttonSelector).then(element => {
+      element.appendChild(button);
+      resolve();
+    });
+  });
+}
+
+function waitForElement(selector) {
+    return new Promise((resolve, reject) => {
+      const mut = new MutationObserver(mutations => {
+        const element = document.querySelector(selector);
+        if (element != null) {
+            mut.disconnect();
+            resolve(element);
+        }
+      });
+      mut.observe(document.body, {subtree: true, childList: true});
+    });
+}
+
+function determineEntityType() {
+  if (/https:\/\/soundcloud\.com\/(?!feed|discover|upload)[^/]+(\?.*)?$/.test(location.href)) {
+    entity = {
+      buttonSelector: ".userInfoBar__buttons .sc-button-group",
+      build: buildUser,
+    }
+    return true;
+  }
+  if (/https:\/\/soundcloud\.com\/(?!you)[^/]+\/(?!tracks|albums|popular-tracks|sets|reposts)[^/]+(\?.*)?$/.test(location.href)) {
+    entity = {
+      buttonSelector: ".dashbox",
+      build: buildTrack,
+    }
+    return true;
+  }
+  if (/https:\/\/soundcloud\.com\/(?!you)[^/]+\/sets\/[^/]+(\?.*)?$/.test(location.href)) {
+    entity = {
+      buttonSelector: ".dashbox",
+      build: buildSet,
+    }
+    return true;
+  }
+  return false;
+}
+
+let urlCache = new Map();
+let cached, targetType, mbid;
+function UrlInMusicBrainz(url) {
+  cached = urlCache.get(url);
+  if (cached === undefined) {
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        url: "https://musicbrainz.org/ws/2/url?limit=1&fmt=json&inc=artist-rels+label-rels+release-rels&resource="+url,
+        method: "GET",
+        responseType: "json",
+        onload: function(response) {
+          if (!response.response.error && response.response.relations.length > 0) {
+            targetType = response.response.relations[0]["target-type"];
+            mbid = response.response.relations[0][targetType]["id"];
+            urlCache.set(url, [targetType, mbid])
+            resolve([targetType, mbid])
+          } else {
+            urlCache.set(url, null)
+            resolve(null)
+          }
+        },
+        onerror: function(e) {
+          reject(e);
+        }
+      });
+    });
+  }
+  return cached
+}
+
+function buildUser() {
+  return new Promise((resolve, reject) => {
+    //form.action = "https://musicbrainz.org/artist/create"
+    //form.method = "POST";
+    //form.target = "_blank"
+    //form.formtarget = "_blank"
+    //globalPromises.push(userHydration());
+    //globalPromises.push(userScraper());
+    //buttonText = "Import";
+    reject("NOT IMPLEMENTED");
+  });
+}
+
+function userHydration() {
+  return new Promise((resolve, reject) => {
+    requestPromise(location.href).then((response) => {
+      let data = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0]).find(x => x.hydratable == "user").data;
+      if (data == null) {
+        reject("Could not find user hydration data.");
+      }
+      resolve();
+    });
+  });
+}
+
+function userScraper() {
+  return new Promise((resolve, reject) => {
+    waitForElement(".web-profiles").then(element => {
+      for (let a of element.querySelectorAll("li a")) {
+        const url = new URL(a.href);
+        console.log(decodeURIComponent(url.searchParams.get('url')))
+      }
+    });
+    resolve();
+  });
+}
+
+function buildTrack() {
+  return new Promise((resolve, reject) => {
+    GetTrackSetUrl().then((setUrl) => {
+      buttonText = "Go to parent set";
+      button.addEventListener("click", () => {
+        location.href = setUrl;
+      });
+      resolve()
+    }).catch(() => {
+      form.action = "https://musicbrainz.org/release/add"
+      form.method = "POST";
+      form.target = "_blank"
+      form.formtarget = "_blank"
+      buttonText = "Import";
+      globalPromises.push(trackHydration());
+      resolve()
+    });
+  });
+}
+
+function GetTrackSetUrl() {
+  return new Promise((resolve, reject) => {
+    const mut = new MutationObserver(mutations => {
+      const element = document.querySelector(".soundInSetsModule");
+      if (element != null) {
+        const album = element.querySelector(".soundTitle__title");
+        if (element.style.display == 'none') {
+          mut.disconnect();
+          reject();
+        } else if (album != null) {
+          mut.disconnect();
+          resolve(album);
+        }
+      }
+    })
+    mut.observe(document.body, {subtree: true, childList: true});
+  });
+}
+
+function trackHydration() {
+  return new Promise((resolve, reject) => {
+    requestPromise(location.href).then((response) => {
+      let data = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0]).find(x => x.hydratable == "sound").data;
+      if (data == null) {
+        reject("Could not find track hydration data.");
+      } else {
+        addReleaseToForm(data);
+        addTrackToForm(data, 0);
+        resolve();
+      }
+    }).catch(reject);
+  });
+}
+function addTrackToForm(trackData, trackNumber) {
+  addToForm(trackNumber + 1, `mediums.0.track.${trackNumber}.number`);
+  addToForm(trackData.title, `mediums.0.track.${trackNumber}.name`);
+  addToForm(trackData.duration, `mediums.0.track.${trackNumber}.length`);
+  addToForm(trackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.name`);
+  addToForm(trackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.artist.name`);
+}
+function buildSet() {
+  return new Promise((resolve, reject) => {
+    buttonText = "Import";
+    form.action = "https://musicbrainz.org/release/add";
+    form.method = "POST";
+    form.target = "_blank"
+    form.formtarget = "_blank"
+    globalPromises.push(setHydration());
+    resolve()
+  });
+}
+function setHydration() {
+  return new Promise((resolve, reject) => {
+    requestPromise(location.href).then((response) => {
+      let data = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0]).find(x => x.hydratable == "playlist").data;
+      if (data == null) {
+        reject("Could not find set hydration data.");
+      } else {
+        addReleaseToForm(data);
+        globalPromises.push(setScraper(data.track_count).then(resolve));
+      }
+    }).catch(reject);
+  });
+}
+function setScraper(track_count) {
+  button.title = "Scroll to load tracks";
+  return new Promise((resolve, reject) => {
+    console.log("Waiting for", track_count, "tracks");
+    const mut = new MutationObserver(mutations => {
+      const elements = document.querySelectorAll(".trackList__item");
+      const names = document.querySelectorAll(".trackItem__trackTitle");
+      if (elements.length == track_count && names.length == track_count) {
+        mut.disconnect();
+        for (let track of elements) {
+          globalPromises.push(requestPromise(track.querySelector(".trackItem__trackTitle").href).then((trackResponse) => {
+            trackData = JSON.parse(trackResponse.responseText.split("__sc_hydration =")[1].split(";</script>")[0]).find(x => x.hydratable === 'sound').data;
+            addTrackToForm(trackData, track.querySelector(".trackItem__number").innerHTML.trim() - 1);
+          }));
+        }
+        console.log("Done with", track_count, "tracks");
+        resolve();
+        button.title = "Import release to MusicBrainz";
+      }
+    })
+    mut.observe(document.body, {subtree: true, childList: true});
+  });
+}
+let type, date, url_count;
+function addReleaseToForm(releaseData) {
+    if (releaseData.set_type != undefined) {
+      addToForm(convertReleaseTypes(releaseData.set_type), "type");
+    } else if (releaseData.track_format != undefined) {
+      addToForm(convertReleaseTypes(releaseData.track_format), "type");
+    }
+
+    addToForm("Digital Media", "mediums.0.format");
+
+    // Edit note
+    addToForm(location.href + "\n--\nSoundCloud: MusicBrainz import\nhttps://github.com/garylaski/userscripts", "edit_note");
+    // Release title
+    addToForm(releaseData.title, "name");
+    addToForm("official", "status");
+    addToForm("None", "packaging");
+
+    // Date information
+    date = new Date(releaseData.display_date);
+    addToForm(date.getUTCFullYear(), "date.year");
+    addToForm(date.getUTCDate(), "date.day");
+    addToForm(date.getUTCMonth() + 1, "date.month");
+    addToForm("XW", "country");
+
+    //Release label
+    if (releaseData.label_name) {
+        addToForm(releaseData.label_name, "labels.0.name");
+    }
+
+    // Barcode
+    if (releaseData.publisher_metadata && releaseData.publisher_metadata.upc_or_ean) {
+        addToForm(releaseData.publisher_metadata.upc_or_ean, "barcode");
+    }
+
+    // Release artist
+    addToForm(releaseData.user.username, "artist_credit.names.0.name");
+    addToForm(releaseData.user.username, "artist_credit.names.0.artist.name");
+
+    url_count = 0;
+
+    // Stream for free URL
+    addToForm(location.href, "urls." + url_count + ".url");
+    addToForm(85, "urls." + url_count + ".link_type");
+    url_count++;
+
+    // Check if downloadable
+    if (releaseData.downloadable) {
+        addToForm(location.href, "urls." + url_count + ".url");
+        addToForm( 75, "urls." + url_count + ".link_type");
+        url_count++;
+    }
+
+    // License URL
+    if (releaseData.license != 'all-rights-reserved') {
+        addToForm(convertLicense(releaseData.license), "urls." + url_count + ".url");
+        addToForm(301, "urls." + url_count + ".link_type");
+        url_count++;
+    }
+}
 function convertReleaseTypes(type) {
     switch(type) {
         case 'album':
             return 'Album';
         case 'ep':
             return 'EP';
-        case 'single':
+        case 'single', 'single-track':
             return 'Single';
+        case 'compilation':
+            return 'Compilation';
         default:
             return 'Other';
     }
@@ -55,196 +396,17 @@ function convertLicense(license) {
     return "https://creativecommons.org/licenses/" + license + "/4.0/";
 }
 
-function addToForm(form, value, name) {
-    value = value.toString().replaceAll("'", '&apos;');
-    form.innerHTML += `<input type='hidden' value='${value}' name='${name}'/>`;
+function addToForm(value, name) {
+  value = value.toString().replaceAll("'", '&apos;');
+  formString += `<input type='hidden' value='${value}' name='${name}'/>`;
 }
-
-function addArtistMBID(form, url, tag) {
+function requestPromise(url) {
   return new Promise((resolve, reject) => {
     GM_xmlhttpRequest({
-          url: "https://musicbrainz.org/ws/2/url?limit=1&fmt=json&inc=artist-rels&resource="+url,
-          method: "GET",
-          responseType: "json",
-          onload: function(response) {
-              if(response.response.error) {
-                reject(response.response.error);
-                return;
-              }
-              if (response.response.relations.length > 0) {
-                  addToForm(form, response.response.relations[0].artist.id, tag);
-              }
-              resolve("Success");
-          },
-          onerror: function(error) {
-              reject(error);
-          }
-      });
+      url: url,
+      method: "GET",
+      onload: resolve,
+      onerror: reject
+    });
   });
 }
-
-function submitRelease() {
-    var soundcloudAlbumData;
-    GM_xmlhttpRequest({
-        url: location.href,
-        method: "GET",
-        onload: function(response) {
-            // Create form
-            let mbForm = document.createElement("form");
-            let promises = [];
-            mbForm.method = "POST";
-            mbForm.target = "_blank"
-            mbForm.action = "https://musicbrainz.org/release/add"
-            if (location.href.split("/")[4] == "sets") {
-                soundcloudAlbumData = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0]).find(x => x.hydratable === 'playlist').data;
-            } else {
-                soundcloudAlbumData = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0]).find(x => x.hydratable === 'sound').data;
-            }
-            // Edit note
-            addToForm(mbForm, location.href + "\n--\nSoundCloud: MusicBrainz import\nhttps://github.com/garylaski/userscripts", "edit_note");
-            // Release title
-            addToForm(mbForm, soundcloudAlbumData.title, "name");
-            addToForm(mbForm, "official", "status");
-            addToForm(mbForm, "None", "packaging");
-
-            // Date information
-            let date = new Date(soundcloudAlbumData.display_date);
-            addToForm(mbForm, date.getUTCFullYear(), "date.year");
-            addToForm(mbForm, date.getUTCDate(), "date.day");
-            addToForm(mbForm, date.getUTCMonth() + 1, "date.month");
-            addToForm(mbForm, "XW", "country");
-
-            //Release label
-            if (soundcloudAlbumData.label_name) {
-                addToForm(mbForm, soundcloudAlbumData.label_name, "labels.0.name");
-            }
-
-            // Barcode
-            if (soundcloudAlbumData.publisher_metadata && soundcloudAlbumData.publisher_metadata.upc_or_ean) {
-                addToForm(mbForm, soundcloudAlbumData.publisher_metadata.upc_or_ean, "barcode");
-            }
-
-            // Release artist
-            addToForm(mbForm, soundcloudAlbumData.user.username, "artist_credit.names.0.name");
-            addToForm(mbForm, soundcloudAlbumData.user.username, "artist_credit.names.0.artist.name");
-            promises.push(addArtistMBID(mbForm, soundcloudAlbumData.user.permalink_url, "artist_credit.names.0.mbid"));
-
-            // Release type
-            if (soundcloudAlbumData.kind == "track") {
-                // Logic to determine if it is part of a release
-                if (document.querySelectorAll(".sidebarModule")[1].getElementsByClassName("soundBadgeList__item").length == 0) {
-                    addToForm(mbForm, "1", "mediums.0.track.0.number");
-                    addToForm(mbForm, soundcloudAlbumData.title, "mediums.0.track.0.name");
-                    addToForm(mbForm, soundcloudAlbumData.duration, "mediums.0.track.0.length");
-                    addToForm(mbForm, soundcloudAlbumData.user.username, "mediums.0.track.0.artist_credit.names.0.name");
-                    addToForm(mbForm, soundcloudAlbumData.user.username, "mediums.0.track.0.artist_credit.names.0.artist.name");
-                    promises.push(addArtistMBID(mbForm, soundcloudAlbumData.user.permalink_url, "mediums.0.track.0.artist_credit.names.0.mbid"));
-                    // Assuming tracks not part of releases are singles
-                    addToForm(mbForm, "Single", "type");
-                } else {
-                    document.querySelector(".sc-button-mb").innerHTML = "Go To Release";
-                    document.querySelector(".sc-button-mb").addEventListener("click", function() {
-                        location.href = document.querySelectorAll(".sidebarModule")[1].getElementsByClassName("soundBadgeList__item")[0].querySelector(".sc-link-primary").href;
-                    });
-                    return;
-                }
-            } else {
-                let type = convertReleaseTypes(soundcloudAlbumData.set_type);
-                addToForm(mbForm, type, "type");
-                let trackNodeList = document.querySelectorAll(".trackItem");
-                trackNodeList.forEach(function (track) {
-                    let p = new Promise((resolve, reject) => {
-                        GM_xmlhttpRequest({
-                            url: track.querySelector(".trackItem__trackTitle").href,
-                            method: "GET",
-                            onload: function(response) {
-                                let soundcloudTrackData = JSON.parse(response.responseText.split("__sc_hydration =")[1].split(";</script>")[0]).find(x => x.hydratable === 'sound').data;
-                                let trackNumber = track.querySelector(".trackItem__number").innerHTML.trim() - 1;
-                                addToForm(mbForm, trackNumber + 1, `mediums.0.track.${trackNumber}.number`);
-                                addToForm(mbForm, soundcloudTrackData.title, `mediums.0.track.${trackNumber}.name`);
-                                addToForm(mbForm, soundcloudTrackData.duration, `mediums.0.track.${trackNumber}.length`);
-                                addToForm(mbForm, soundcloudTrackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.name`);
-                                addToForm(mbForm, soundcloudTrackData.user.username, `mediums.0.track.${trackNumber}.artist_credit.names.0.artist.name`);
-                                promises.push(addArtistMBID(mbForm, soundcloudTrackData.user.permalink_url, `mediums.0.track.${trackNumber}.artist_credit.names.0.mbid`));
-                                resolve("Success");
-                            },
-                            onerror: function(error) {
-                                reject(error);
-                            }
-                        });
-                    });
-                    promises.push(p);
-                });
-            }
-            addToForm(mbForm, "Digital Media", "mediums.0.format");
-
-            let url_count = 0;
-
-            // Stream for free URL
-            addToForm(mbForm, location.href, "urls." + url_count + ".url");
-            addToForm(mbForm, 85, "urls." + url_count + ".link_type");
-            url_count++;
-
-            // Check if downloadable
-            if (soundcloudAlbumData.downloadable) {
-                addToForm(mbForm, location.href, "urls." + url_count + ".url");
-                addToForm(mbForm, 75, "urls." + url_count + ".link_type");
-                url_count++;
-            }
-
-            // License URL
-            if (soundcloudAlbumData.license != 'all-rights-reserved') {
-                addToForm(mbForm, convertLicense(soundcloudAlbumData.license), "urls." + url_count + ".url");
-                addToForm(mbForm, 301, "urls." + url_count + ".link_type");
-                url_count++;
-            }
-            Promise.all(promises).then((values) => {
-                document.body.appendChild(mbForm);
-                mbForm.submit();
-                document.body.removeChild(mbForm);
-            }).catch((error) => {
-                console.error(error.message);
-            });
-        }
-    });
-}
-
-function createImportButton(parent) {
-    if (parent.querySelector(".sc-button-mb")) {
-        return;
-    }
-    GM_xmlhttpRequest({
-        url: "https://musicbrainz.org/ws/2/url?fmt=json&resource="+location.href,
-        method: "GET",
-        responseType: "json",
-        onload: function(response) {
-            var importButton;
-            if(response.response.error) {
-                importButton = `<button title="MB Import" class="sc-button-mb sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive">Import</button>`;
-                parent.innerHTML = importButton + parent.innerHTML;
-                parent.querySelector(".sc-button-mb").addEventListener("click",submitRelease);
-            } else {
-                let mbid = response.response.id;
-                importButton = `<button title="MB Entry" class="sc-button-mb sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive">Open</button>`;
-                parent.innerHTML = importButton + parent.innerHTML;
-                parent.querySelector(".sc-button-mb").addEventListener("click", function() {
-                    window.open("https://musicbrainz.org/url/"+mbid)
-                });
-            }
-        }
-    });
-}
-
-let previousUrl = '';
-let waiting = false;
-const urlObserver = new MutationObserver(function(mutations) {
-    if (location.href !== previousUrl) {
-        previousUrl = location.href;
-        if (location.href.split('/').length > 4 && !waiting) {
-            waiting = true;
-            waitTillExists(".dashbox, .listenNetworkSidebar__creator", createImportButton);
-        }
-    }
-});
-
-urlObserver.observe(document, {subtree: true, childList: true})
