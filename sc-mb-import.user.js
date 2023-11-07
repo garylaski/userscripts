@@ -29,7 +29,6 @@
 
 let globalPromises = []
 let form, entity, formString;
-let buttonText;
 let previousUrl = '';
 new MutationObserver(function(mutations) {
     if (location.href !== previousUrl) {
@@ -69,17 +68,12 @@ async function onUrlChange() {
         globalPromises.push(entity.build());
         Promise.all(globalPromises)
             .then(() => {
-                button.innerHTML = buttonText;
-                button.appendChild(form);
-                button.removeEventListener("click", submitForm)
-                button.addEventListener("click", submitForm);
                 button.disabled = false;
             })
             .catch((e) => {
                 button.innerHTML = "ERROR";
                 button.title = e;
                 console.error(e);
-
             });
     }
 }
@@ -169,8 +163,9 @@ function UrlInMusicBrainz(url) {
                     reject(e);
                 }
             });
+        } else {
+            resolve(cached);
         }
-        resolve(cached);
     });
 }
 
@@ -204,7 +199,6 @@ function userScraper() {
         waitForElement(".web-profiles").then(element => {
             for (let a of element.querySelectorAll("li a")) {
                 const url = new URL(a.href);
-                console.log(decodeURIComponent(url.searchParams.get('url')))
             }
         });
         resolve();
@@ -214,7 +208,7 @@ function userScraper() {
 function buildTrack() {
     return new Promise((resolve, reject) => {
         GetTrackSetUrl().then((setUrl) => {
-            buttonText = "Go to parent set";
+            button.innerHTML = "Go to parent set";
             button.addEventListener("click", () => {
                 location.href = setUrl;
             });
@@ -224,8 +218,12 @@ function buildTrack() {
             form.method = "POST";
             form.target = "_blank"
             form.formtarget = "_blank"
-            buttonText = "Import";
-            globalPromises.push(trackHydration());
+            globalPromises.push(trackHydration().then(() => {
+                button.innerHTML = "Import";
+                button.appendChild(form);
+                button.removeEventListener("click", submitForm);
+                button.addEventListener("click", submitForm);
+            }));
             resolve()
         });
     });
@@ -242,7 +240,8 @@ function GetTrackSetUrl() {
                     reject();
                 } else if (album != null) {
                     mut.disconnect();
-                    resolve(album);
+                    button.title = album.href;
+                    resolve(album.href);
                 }
             }
         })
@@ -280,12 +279,15 @@ function addTrackToForm(trackData, trackNumber) {
 }
 function buildSet() {
     return new Promise((resolve, reject) => {
-        buttonText = "Import";
         form.action = "https://musicbrainz.org/release/add";
         form.method = "POST";
         form.target = "_blank"
         form.formtarget = "_blank"
-        globalPromises.push(setHydration());
+        globalPromises.push(setHydration().then(() => {
+           button.innerHTML = "Import";
+           button.appendChild(form);
+           button.addEventListener("click", submitForm);
+        }));
         resolve()
     });
 }
@@ -327,11 +329,6 @@ function setScraper(track_count) {
 }
 let type, date, url_count;
 function addReleaseToForm(releaseData) {
-    if (releaseData.set_type != undefined) {
-        addToForm(convertReleaseTypes(releaseData.set_type), "type");
-    } else if (releaseData.track_format != undefined) {
-        addToForm(convertReleaseTypes(releaseData.track_format), "type");
-    }
     globalPromises.push(UrlInMusicBrainz(releaseData.user.permalink_url).then(value => {
         if (value != null) {
             if (value[0] == "artist") {
@@ -341,6 +338,11 @@ function addReleaseToForm(releaseData) {
             }
         }
     }));
+    if (releaseData.set_type != undefined) {
+        addToForm(convertReleaseTypes(releaseData.set_type), "type");
+    } else if (releaseData.track_format != undefined) {
+        addToForm(convertReleaseTypes(releaseData.track_format), "type");
+    }
 
     addToForm("Digital Media", "mediums.0.format");
 
