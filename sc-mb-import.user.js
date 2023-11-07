@@ -114,14 +114,14 @@ function waitForElement(selector) {
 }
 
 function determineEntityType() {
-    if (/https:\/\/soundcloud\.com\/(?!feed|discover|upload)[^/]+(\?.*)?$/.test(location.href)) {
+    if (/https:\/\/soundcloud\.com\/(?!terms-of-use|jobs|settings|logout|download|feed|discover|upload|people|notifications|messages)[^/]+(\?.*)?$/.test(location.href)) {
         entity = {
             buttonSelector: ".userInfoBar__buttons .sc-button-group",
             build: buildUser,
         }
         return true;
     }
-    if (/https:\/\/soundcloud\.com\/(?!you)[^/]+\/(?!tracks|albums|popular-tracks|sets|reposts)[^/]+(\?.*)?$/.test(location.href)) {
+    if (/https:\/\/soundcloud\.com\/(?!you|pages|settings)[^/]+\/(?!tracks|albums|popular-tracks|sets|reposts|likes|following|followers)[^/]+(\?.*)?$/.test(location.href)) {
         entity = {
             buttonSelector: ".dashbox",
             build: buildTrack,
