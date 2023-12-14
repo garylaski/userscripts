@@ -11,10 +11,15 @@
 // @match       https://soundcloud.com/*
 // @licence     GPL-3.0-or-later; http://www.gnu.org/licenses/gpl-3.0.txt
 // @run-at      document-end
-// @grant       GM_xmlhttpRequest
-// @grant       GM_addStyle
+// @grant       GM.xmlHttpRequest
 // ==/UserScript==
-    GM_addStyle (`
+{
+  'use strict';
+  let head = document.getElementsByTagName('head')[0];
+  if (head) {
+    let style = document.createElement('style');
+    style.setAttribute('type', 'text/css');
+    style.textContent = `
         .dashbox {
             padding-bottom: 4px;
         }
@@ -25,7 +30,10 @@
         .sc-button-medium.sc-button-mb {
             margin-bottom: 10px;
         }
-        `);
+        `;
+    head.appendChild(style);
+  }
+};
 
 let globalPromises = []
 let form, entity, formString;
@@ -141,7 +149,7 @@ function UrlInMusicBrainz(url) {
     return new Promise((resolve, reject) => {
         cached = urlCache.get(url);
         if (cached === undefined) {
-            GM_xmlhttpRequest({
+            GM.xmlHttpRequest({
                 url: "https://musicbrainz.org/ws/2/url?limit=1&fmt=json&inc=artist-rels+label-rels+release-rels&resource="+url,
                 method: "GET",
                 responseType: "json",
@@ -420,7 +428,7 @@ function addToForm(value, name) {
 }
 function requestPromise(url) {
     return new Promise((resolve, reject) => {
-        GM_xmlhttpRequest({
+        GM.xmlHttpRequest({
             url: url,
             method: "GET",
             onload: resolve,
