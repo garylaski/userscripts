@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2023.11.01
+// @version     2024.01.31
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts/
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -39,10 +39,10 @@ let globalPromises = []
 let form, entity, formString;
 let previousUrl = '';
 new MutationObserver(function(mutations) {
-    if (location.href !== previousUrl) {
+    if (location.href != previousUrl) {
         previousUrl = location.href;
         Promise.all(globalPromises).catch(error => {
-            console.log(error);
+            console.log("SoundCloud: MusicBrainz import: " + error);
         }).finally(() => {
             globalPromises = [];
             onUrlChange();
@@ -52,6 +52,7 @@ new MutationObserver(function(mutations) {
 
 async function onUrlChange() {
     if (!determineEntityType()) {
+        console.log("SoundCloud: MusicBrainz import: Cannot determine entity type");
         return
     }
     formString = "";
@@ -99,7 +100,8 @@ function createButton() {
         button.disabled = true;
         button.setAttribute("class", "sc-button-mb sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive");
         waitForElement(entity.buttonSelector).then(element => {
-            element.appendChild(button);
+
+            element.parentElement.insertBefore(button, element);
             resolve();
         });
     });
@@ -128,14 +130,14 @@ function determineEntityType() {
     }
     if (/https:\/\/soundcloud\.com\/(?!you|pages|settings)[^/]+\/(?!tracks|albums|popular-tracks|sets|reposts|likes|following|followers)[^/]+(\?.*)?$/.test(location.href)) {
         entity = {
-            buttonSelector: ".dashbox",
+            buttonSelector: ".relatedSoundsModule",
             build: buildTrack,
         }
         return true;
     }
     if (/https:\/\/soundcloud\.com\/(?!you)[^/]+\/sets\/[^/]+(\?.*)?$/.test(location.href)) {
         entity = {
-            buttonSelector: ".dashbox",
+            buttonSelector: ".relatedSoundsModule",
             build: buildSet,
         }
         return true;
