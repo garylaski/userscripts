@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2024.01.31
+// @version     2024.02.04
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts/
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -137,7 +137,7 @@ function determineEntityType() {
     }
     if (/https:\/\/soundcloud\.com\/(?!you)[^/]+\/sets\/[^/]+(\?.*)?$/.test(location.href)) {
         entity = {
-            buttonSelector: ".relatedSoundsModule",
+            buttonSelector: ".setsModule",
             build: buildSet,
         }
         return true;
