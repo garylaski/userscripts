@@ -75,6 +75,7 @@ function submitForm(func) {
         try {
             const submit = await func();
             if (submit) form.submit();
+            form.replaceChildren();
             button.disabled = false;
         } catch (error) {
             button.innerText = "ERROR";
@@ -144,12 +145,12 @@ async function urlInMusicBrainz(url) {
 async function addReleaseToForm() {
     let promises = [];
     const json = await fetchHydration(location.href);
-    const playlist = json.find(x => x.hydratable == "playlist");
+    const playlist = json.find(x => x.hydratable == "playlist")?.data;
     if (playlist) {
-        promises.push(addSetToForm(playlist.data));
+        promises.push(addSetToForm(playlist));
         const elements = content.querySelectorAll(".trackList__item");
-        if (elements.length != playlist.data.track_count) {
-            throw new Error(`Could not find all tracks: ${elements.length} / ${playlist.data.track_count}.\nTry scrolling to the bottom of the page.`);
+        if (elements.length != playlist.track_count) {
+            throw new Error(`Could not find all tracks: ${elements.length} / ${playlist.track_count}.\nTry scrolling to the bottom of the page.`);
         }
         for (let track of elements) {
             const url = track.querySelector(".trackItem__trackTitle").href;
@@ -167,9 +168,9 @@ async function addReleaseToForm() {
                 return false;
             }
         }
-        const sound = json.find(x => x.hydratable == "sound");
-        promises.push(addSetToForm(sound.data));
-        promises.push(addTrackToForm(sound.data, 0));
+        const sound = json.find(x => x.hydratable == "sound")?.data;
+        promises.push(addSetToForm(sound));
+        promises.push(addTrackToForm(sound, 0));
     }
     await Promise.all(promises);
     return true;
