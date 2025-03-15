@@ -99,7 +99,7 @@ const callback = (mutationList, observer) => {
                     resetForm("https://musicbrainz.org/release/add", "Add Track", addReleaseToForm);
                 }
                 const sidebar = node.querySelector(".l-sidebar-right");
-                if (sidebar && !sidebar.querySelector(".streamSidebar")) {
+                if (sidebar && !sidebar.querySelector(".streamSidebar, .madeForUsername")) {
                     sidebar.prepend(button);
                 }
             }
