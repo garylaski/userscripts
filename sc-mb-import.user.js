@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2025.03.15
+// @version     2025.03.15.1
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts/
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -90,7 +90,7 @@ const callback = (mutationList, observer) => {
         for (const node of mutation.addedNodes) {
             if (node.nodeType === Node.ELEMENT_NODE) {
                 if (node.querySelector(".profileHeader__info")) {
-                    resetForm("https://musicbrainz.org/artist/add", "Add Artist", addArtistToForm);
+                    resetForm("https://musicbrainz.org/artist/create", "Add Artist", addArtistToForm);
                 }
                 if (node.querySelector(".trackList")) {
                     resetForm("https://musicbrainz.org/release/add", "Add Release", addReleaseToForm);
@@ -230,6 +230,11 @@ function addURLToForm(url, type, url_count) {
     addToForm(type, `urls.${url_count}.link_type`);
 }
 
+function addArtistURLToForm(url, type, url_count) {
+    addToForm(url, `edit-artist.url.${url_count}.text`);
+    addToForm(type, `edit-artist.url.${url_count}.link_type_id`);
+}
+
 async function loadTrackAndAddToForm(url, number) {
     const json = await fetchHydration(url);
     const sound = json.find(x => x.hydratable == "sound");
@@ -249,7 +254,26 @@ async function addTrackToForm(data, number) {
 }
 
 async function addArtistToForm() {
-    throw new Error("TODO");
+    const json = await fetchHydration(location.href);
+    const user = json.find(x => x.hydratable == "user")?.data;
+    if (!user) {
+        throw new Error("Invalid hydration data for arist.");
+    }
+    addToForm(user.username, `edit-artist.name`);
+    addToForm(user.username, `edit-artist.sort_name`);
+    let url_count = 0;
+    addArtistURLToForm(user.permalink_url, 194, url_count++);
+    
+    const date = new Date(user.created_at);
+    addToForm(date.getUTCFullYear(), "edit-artist.period.begin_date.year");
+    addToForm(date.getUTCDate(), "edit-artist.period.begin_date.day");
+    addToForm(date.getUTCMonth() + 1, "edit-artist.period.begin_date.month");
+
+    // Not sure what the corresponding seed tags are
+    // if (user.country_code) addToForm(user.country_code, "edit-area");
+    // if (user.city) addToForm(user.city, "edit-area");
+    addToForm(`${user.permalink_url}\n--\nSoundCloud: MusicBrainz import\nhttps://github.com/garylaski/userscripts`, "edit_note");
+    return true;
 }
 
 function convertReleaseTypes(type) {
