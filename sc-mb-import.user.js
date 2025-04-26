@@ -154,7 +154,7 @@ async function addReleaseToForm() {
         }
         for (let track of elements) {
             const url = track.querySelector(".trackItem__trackTitle").href;
-            promises.push(loadTrackAndAddToForm(url, track.querySelector(".trackItem__number").innerHTML.trim() - 1));
+            promises.push(loadTrackAndAddToForm(url, track.querySelector(".trackItem__number > span").innerHTML.trim() - 1));
         }
     } else {
         for (const title of content.querySelectorAll(".sidebarModule")) {
