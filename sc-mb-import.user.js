@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2025.07.18.1
+// @version     2025.07.18.2
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts/
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -27,6 +27,8 @@ style.textContent = `
 const content = document.getElementById("content");
 content.parentElement.prepend(style);
 
+const container = document.createElement("div");
+
 const button = document.createElement("button");
 button.setAttribute("class", "sc-button-mb sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive");
 button.setAttribute("form", "mb-form");
@@ -34,6 +36,7 @@ button.type = "submit";
 button.disabled = true;
 
 const buttonLink = document.createElement("a");
+buttonLink.setAttribute("class", "sc-button-mb sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive");
 buttonLink.textContent = "Go to parent set";
 
 const form = document.createElement("form");
@@ -51,6 +54,7 @@ function setFormAttributes(method, onsubmit, action, innerText) {
 async function resetForm(action, text, onsubmit) {
     form.replaceChildren();
     button.replaceChildren();
+    container.replaceChildren(button);
     setFormAttributes("POST", submitForm(onsubmit), action, text);
     const value = await urlInMusicBrainz(location.href);
     if (value) {
@@ -100,7 +104,7 @@ const callback = (mutationList, observer) => {
                 }
                 const sidebar = node.querySelector(".l-sidebar-right");
                 if (sidebar && !sidebar.querySelector(".streamSidebar, .madeForUsername")) {
-                    sidebar.prepend(button);
+                    sidebar.prepend(container);
                 }
             }
         }
@@ -164,7 +168,7 @@ async function addReleaseToForm() {
                 buttonLink.href = pathname;
                 button.title = pathname;
                 form.action = null;
-                button.replaceChildren(buttonLink);
+                container.replaceChildren(buttonLink);
                 return false;
             }
         }
