@@ -39,6 +39,20 @@ const buttonLink = document.createElement("a");
 buttonLink.setAttribute("class", "sc-button-mb sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive");
 buttonLink.textContent = "Go to parent set";
 
+try {
+const artworkLink = document.createElement("a");
+console.log("start");
+setTimeout(() => {artworkLink.setAttribute("href",loadArtworkUrl());}, 500);
+
+console.log("end");
+artworkLink.textContent = "Link to Artwork";
+artworkLink.target = "_blank";
+container.prepend(artworkLink);
+}
+catch (error) {
+    console.log("errorrrrrrrr");
+  console.error("Error caught:", error.message);
+}
 const form = document.createElement("form");
 form.setAttribute("id", "mb-form");
 form.target = "_blank";
@@ -54,7 +68,7 @@ function setFormAttributes(method, onsubmit, action, innerText) {
 async function resetForm(action, text, onsubmit) {
     form.replaceChildren();
     button.replaceChildren();
-    container.replaceChildren(button);
+    container.replaceChildren(button,artworkLink);
     setFormAttributes("POST", submitForm(onsubmit), action, text);
     const value = await urlInMusicBrainz(location.href);
     if (value) {
@@ -298,4 +312,16 @@ function convertReleaseTypes(type) {
 function convertLicense(license) {
     license = license.split('cc-')[1];
     return `https://creativecommons.org/licenses/${license}/4.0/`;
+}
+
+function loadArtworkUrl() {
+    let backgroundArtUrl = document.querySelector(".listenArtworkWrapper  span.sc-artwork").style.backgroundImage;
+
+    // Extract the URL from the 'url("...")' string
+    const urlMatch = backgroundArtUrl.match(/url\(['"]?(.*?)['"]?\)/);
+    if (urlMatch && urlMatch[1]) {
+        return urlMatch[1];
+    }
+
+    return null; // No background image URL found
 }
