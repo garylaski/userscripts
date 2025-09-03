@@ -39,20 +39,13 @@ const buttonLink = document.createElement("a");
 buttonLink.setAttribute("class", "sc-button-mb sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive");
 buttonLink.textContent = "Go to parent set";
 
-try {
 const artworkLink = document.createElement("a");
-console.log("start");
+// The artwork is not in the initial load of the page. Wait a bit for it to load in
 setTimeout(() => {artworkLink.setAttribute("href",loadArtworkUrl());}, 500);
-
-console.log("end");
 artworkLink.textContent = "Link to Artwork";
 artworkLink.target = "_blank";
 container.prepend(artworkLink);
-}
-catch (error) {
-    console.log("errorrrrrrrr");
-  console.error("Error caught:", error.message);
-}
+
 const form = document.createElement("form");
 form.setAttribute("id", "mb-form");
 form.target = "_blank";
@@ -68,7 +61,7 @@ function setFormAttributes(method, onsubmit, action, innerText) {
 async function resetForm(action, text, onsubmit) {
     form.replaceChildren();
     button.replaceChildren();
-    container.replaceChildren(button,artworkLink);
+    container.replaceChildren(button, artworkLink);
     setFormAttributes("POST", submitForm(onsubmit), action, text);
     const value = await urlInMusicBrainz(location.href);
     if (value) {
