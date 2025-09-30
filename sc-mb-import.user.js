@@ -267,11 +267,6 @@ async function addArtistToForm() {
     addToForm(user.username, `edit-artist.sort_name`);
     let url_count = 0;
     addArtistURLToForm(user.permalink_url, 194, url_count++);
-    
-    const date = new Date(user.created_at);
-    addToForm(date.getUTCFullYear(), "edit-artist.period.begin_date.year");
-    addToForm(date.getUTCDate(), "edit-artist.period.begin_date.day");
-    addToForm(date.getUTCMonth() + 1, "edit-artist.period.begin_date.month");
 
     // Not sure what the corresponding seed tags are
     // if (user.country_code) addToForm(user.country_code, "edit-area");
