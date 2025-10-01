@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2025.07.18.2
+// @version     2025.09.30
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts/
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -226,7 +226,10 @@ async function addSetToForm(data) {
     let url_count = 0;
     addURLToForm(location.href, 85, url_count++);
     if (data.downloadable) addURLToForm(location.href, 75, url_count++);
-    if (data.license != 'all-rights-reserved') addURLToForm(convertLicense(data.license), 301, url_count++);
+    if (data.license != 'all-rights-reserved') {
+        const license = document.querySelector(".license__type");
+        if (license && license.href) addURLToForm(license.href, 301, url_count++);
+    }
 }
 
 function addURLToForm(url, type, url_count) {
@@ -288,9 +291,4 @@ function convertReleaseTypes(type) {
         default:
             return 'Other';
     }
-}
-
-function convertLicense(license) {
-    license = license.split('cc-')[1];
-    return `https://creativecommons.org/licenses/${license}/4.0/`;
 }
