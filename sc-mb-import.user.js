@@ -51,11 +51,11 @@ function setFormAttributes(method, onsubmit, action, innerText) {
     button.innerText = innerText;
 }
 
-async function resetForm(action, text, onsubmit) {
+async function resetForm(method, action, text, onsubmit) {
     form.replaceChildren();
     button.replaceChildren();
     container.replaceChildren(button);
-    setFormAttributes("POST", submitForm(onsubmit), action, text);
+    setFormAttributes(method, submitForm(onsubmit), action, text);
     const value = await urlInMusicBrainz(location.href);
     if (value) {
         setFormAttributes("GET", null, `https://musicbrainz.org/${value[0]}/${value[1]}`, "Open");
@@ -94,13 +94,13 @@ const callback = (mutationList, observer) => {
         for (const node of mutation.addedNodes) {
             if (node.nodeType === Node.ELEMENT_NODE) {
                 if (node.querySelector(".profileHeader__info")) {
-                    resetForm("https://musicbrainz.org/artist/create", "Add Artist", addArtistToForm);
+                    resetForm("GET", "https://musicbrainz.org/artist/create", "Add Artist", addArtistToForm);
                 }
                 if (node.querySelector(".trackList")) {
-                    resetForm("https://musicbrainz.org/release/add", "Add Release", addReleaseToForm);
+                    resetForm("POST", "https://musicbrainz.org/release/add", "Add Release", addReleaseToForm);
                 }
                 if (node.querySelector(".commentsList")) {
-                    resetForm("https://musicbrainz.org/release/add", "Add Track", addReleaseToForm);
+                    resetForm("POST", "https://musicbrainz.org/release/add", "Add Track", addReleaseToForm);
                 }
                 const sidebar = node.querySelector(".l-sidebar-right");
                 if (sidebar && !sidebar.querySelector(".streamSidebar, .madeForUsername")) {
@@ -266,12 +266,12 @@ async function addArtistToForm() {
     addToForm(user.username, `edit-artist.name`);
     addToForm(user.username, `edit-artist.sort_name`);
     let url_count = 0;
-    addArtistURLToForm(user.permalink_url, 194, url_count++);
+    addArtistURLToForm(user.permalink_url, 291, url_count++);
 
     // Not sure what the corresponding seed tags are
-    // if (user.country_code) addToForm(user.country_code, "edit-area");
-    // if (user.city) addToForm(user.city, "edit-area");
-    addToForm(`${user.permalink_url}\n--\nSoundCloud: MusicBrainz import\nhttps://github.com/garylaski/userscripts`, "edit_note");
+    // if (user.country_code) addToForm(user.country_code, "edit-artist.edit-area");
+    // if (user.city) addToForm(user.city, "edit-artist.edit-area");
+    addToForm(`${user.permalink_url}\n--\nSoundCloud: MusicBrainz import\nhttps://github.com/garylaski/userscripts`, "edit-artist.edit_note");
     return true;
 }
 
