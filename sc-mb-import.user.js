@@ -226,6 +226,8 @@ async function addSetToForm(data) {
     let url_count = 0;
     addURLToForm(location.href, 85, url_count++);
     if (data.downloadable) addURLToForm(location.href, 75, url_count++);
+    const buy_link = document.querySelector(".soundActions__purchaseLink");
+    if (buy_link) addURLToForm(buy_link.href, 74, url_count++);
     if (data.license != 'all-rights-reserved') {
         const license = document.querySelector(".license__type");
         if (license && license.href) addURLToForm(license.href, 301, url_count++);
