@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2025.09.30
+// @version     2025.11.7
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts/
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -125,7 +125,7 @@ let urlCache = new Map();
 async function urlInMusicBrainz(url) {
     const cached = urlCache.get(url);
     if (cached !== undefined) return cached;
-    const fetchURL = `https://musicbrainz.org/ws/2/url?limit=1&fmt=json&inc=artist-rels+label-rels+release-rels&resource=${url}`
+    const fetchURL = `https://musicbrainz.org/ws/2/url?limit=1&fmt=json&inc=artist-rels+label-rels+release-rels+recording-rels&resource=${url}`
     const response = await fetch(fetchURL);
     if (!response.ok) {
         if (response.status == 404) {
