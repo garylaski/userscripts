@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2025.11.7
+// @version     2025.11.8
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts/
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -227,7 +227,14 @@ async function addSetToForm(data) {
     addURLToForm(location.href, 85, url_count++);
     if (data.downloadable) addURLToForm(location.href, 75, url_count++);
     const buy_link = document.querySelector(".soundActions__purchaseLink");
-    if (buy_link) addURLToForm(buy_link.href, 74, url_count++);
+    if (buy_link) {
+        let url = new URL(buy_link.href);
+        if (url.host == "gate.sc") {
+            let params = new URLSearchParams(url.search);
+            url = new URL(params.get('url'));
+        }
+        addURLToForm(url.href, 74, url_count++);
+    }
     if (data.license != 'all-rights-reserved') {
         const license = document.querySelector(".license__type");
         if (license && license.href) addURLToForm(license.href, 301, url_count++);
