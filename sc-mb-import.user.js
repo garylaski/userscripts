@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2025.11.8
+// @version     2025.11.8.1
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts/
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -13,6 +13,9 @@
 // @run-at      document-idle
 // @noframes
 // ==/UserScript==
+
+// For use with mb-forward-release.user.js
+const ENABLE_FORWARDING = false;
 
 const style = document.createElement("style");
 style.textContent = `
@@ -70,6 +73,12 @@ function addToForm(value, name) {
     textarea.value = value;
     textarea.style.display = 'none';
     form.appendChild(textarea);
+}
+
+function addToForwarded(value, name) {
+    if (!ENABLE_FORWARDING) return;
+    if (!form.action.includes('#')) form.action += '#';
+    form.action += `${name}=${encodeURIComponent(value)}&`
 }
 
 function submitForm(func) {
@@ -198,7 +207,9 @@ async function addSetToForm(data) {
     addToForm("Digital Media", "mediums.0.format");
 
     // Edit note
-    addToForm(`${location.href}\n--\nSoundCloud: MusicBrainz import\nhttps://github.com/garylaski/userscripts`, "edit_note");
+    const edit_note = `${location.href}\n--\nSoundCloud: MusicBrainz import\nhttps://github.com/garylaski/userscripts`
+    addToForm(edit_note, "edit_note");
+    addToForwarded(edit_note, "edit_note");
     // Release title
     addToForm(data.title, "name");
     addToForm("official", "status");
@@ -265,6 +276,8 @@ async function addTrackToForm(data, number) {
     addToForm(number + 1, `mediums.0.track.${number}.number`);
     addToForm(data.title, `mediums.0.track.${number}.name`);
     addToForm(data.duration, `mediums.0.track.${number}.length`);
+    addToForwarded(data.permalink_url, `mediums.0.track.${number}.url.0.text`);
+    addToForwarded(268, `mediums.0.track.${number}.url.0.link_type_id`);
     addToForm(data.user.username, `mediums.0.track.${number}.artist_credit.names.0.name`);
     addToForm(data.user.username, `mediums.0.track.${number}.artist_credit.names.0.artist.name`);
 }
