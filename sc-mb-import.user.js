@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2025.11.8.1
+// @version     2026.05.9
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts/
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -225,14 +225,22 @@ async function addSetToForm(data) {
     //Release label
     if (data.label_name) addToForm(data.label_name, "labels.0.name");
 
-    // Barcode
-    if (data.publisher_metadata && data.publisher_metadata.upc_or_ean) {
-        addToForm(data.publisher_metadata.upc_or_ean, "barcode");
+    let publisher_artist = false;
+    if (data.publisher_metadata) {
+        // Barcode
+        if (data.publisher_metadata.upc_or_ean) addToForm(data.publisher_metadata.upc_or_ean, "barcode");
+        if (data.publisher_metadata.artist) {
+            addToForm(data.publisher_metadata.artist, "artist_credit.names.0.name");
+            addToForm(data.publisher_metadata.artist, "artist_credit.names.0.artist.name");
+            publisher_artist = true;
+        }
     }
 
     // Release artist
-    addToForm(data.user.username, "artist_credit.names.0.name");
-    addToForm(data.user.username, "artist_credit.names.0.artist.name");
+    if (!publisher_artist) {
+        addToForm(data.user.username, "artist_credit.names.0.name");
+        addToForm(data.user.username, "artist_credit.names.0.artist.name");
+    }
 
     let url_count = 0;
     addURLToForm(location.href, 85, url_count++);
@@ -278,8 +286,24 @@ async function addTrackToForm(data, number) {
     addToForm(data.duration, `mediums.0.track.${number}.length`);
     addToForwarded(data.permalink_url, `mediums.0.track.${number}.url.0.text`);
     addToForwarded(268, `mediums.0.track.${number}.url.0.link_type_id`);
-    addToForm(data.user.username, `mediums.0.track.${number}.artist_credit.names.0.name`);
-    addToForm(data.user.username, `mediums.0.track.${number}.artist_credit.names.0.artist.name`);
+
+    let publisher_artist = false;
+    if (data.publisher_metadata) {
+        // Not supported
+        // if (data.publisher_metadata.isrc) 
+        // if (data.publisher_metadata.writer_composer)
+        if (data.publisher_metadata.artist) {
+            addToForm(data.publisher_metadata.artist, `mediums.0.track.${number}.artist_credit.names.0.name`);
+            addToForm(data.publisher_metadata.artist, `mediums.0.track.${number}.artist_credit.names.0.artist.name`);
+            publisher_artist = true;
+        }
+    }
+
+    // Release artist
+    if (!publisher_artist) {
+        addToForm(data.user.username, `mediums.0.track.${number}.artist_credit.names.0.name`);
+        addToForm(data.user.username, `mediums.0.track.${number}.artist_credit.names.0.artist.name`);
+    }
 }
 
 async function addArtistToForm() {
