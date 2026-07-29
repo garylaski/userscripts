@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        SoundCloud: MusicBrainz import
 // @description Import SoundCloud releases into MusicBrainz.
-// @version     2026.05.9
+// @version     2026.07.29
 // @author      garylaski
 // @namespace   https://github.com/garylaski/userscripts/
 // @downloadURL https://github.com/garylaski/userscripts/raw/main/sc-mb-import.user.js
@@ -11,13 +11,20 @@
 // @match       https://soundcloud.com/*
 // @licence     GPL-3.0-or-later; http://www.gnu.org/licenses/gpl-3.0.txt
 // @run-at      document-idle
-// @noframes
 // ==/UserScript==
 
 // For use with mb-forward-release.user.js
 const ENABLE_FORWARDING = false;
-
+const IN_IFRAME = window.top !== window.self;
+// Globals
 const style = document.createElement("style");
+const container = document.createElement("div");
+const button = document.createElement("button");
+const buttonLink = document.createElement("a");
+const form = document.createElement("form");
+const content = document.body;
+let urlCache = new Map();
+
 style.textContent = `
     .sc-button-medium.sc-button-mb:before {
         background-image: url("https://musicbrainz.org/favicon.ico");
@@ -26,32 +33,65 @@ style.textContent = `
     .sc-button-medium.sc-button-mb {
         margin-bottom: 10px;
     }
-`
-const content = document.getElementById("content");
-content.parentElement.prepend(style);
+`;
+document.body.prepend(style);
 
-const container = document.createElement("div");
-
-const button = document.createElement("button");
 button.setAttribute("class", "sc-button-mb sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive");
 button.setAttribute("form", "mb-form");
 button.type = "submit";
 button.disabled = true;
 
-const buttonLink = document.createElement("a");
 buttonLink.setAttribute("class", "sc-button-mb sc-button-secondary sc-button sc-button-medium sc-button-block sc-button-responsive");
 buttonLink.textContent = "Go to parent set";
 
-const form = document.createElement("form");
 form.setAttribute("id", "mb-form");
 form.target = "_blank";
-content.parentElement.prepend(form);
+document.body.prepend(form);
+const callback = (mutationList, observer) => {
+    for (const mutation of mutationList) {
+        for (const node of mutation.addedNodes) {
+            checkNode(node);
+        }
+    }
+};
+checkChildren(content);
+const observer = new MutationObserver(callback);
+observer.observe(content, { childList: true, subtree: true });
+
+function checkChildren (node) {
+    for (var i = 0; i < node.childNodes.length; i++) {
+      var child = node.childNodes[i];
+      checkChildren(child);
+      checkNode(child);
+    }
+}
 
 function setFormAttributes(method, onsubmit, action, innerText) {
     form.method = method;
     form.onsubmit = onsubmit;
     form.action = action;
     button.innerText = innerText;
+}
+
+function checkNode(node) {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+        var sidebar = null;
+        if (node.querySelector(".profileHeader__info")) {
+            resetForm("GET", "https://musicbrainz.org/artist/create", "Add Artist", addArtistToForm);
+            sidebar = node.querySelector(".l-sidebar-right");
+        }
+        if (node.querySelector(".trackList")) {
+            resetForm("POST", "https://musicbrainz.org/release/add", "Add Release", addReleaseToForm);
+            sidebar = node.querySelector(".l-sidebar-right");
+        }
+        if (node.querySelector(".mui-133631w")) {
+            resetForm("POST", "https://musicbrainz.org/release/add", "Add Track", addReleaseToForm);
+            sidebar = node.querySelector(".mui-18fz54e");
+        }
+        if (sidebar) {
+            sidebar.prepend(container);
+        }
+    }
 }
 
 async function resetForm(method, action, text, onsubmit) {
@@ -98,39 +138,14 @@ function submitForm(func) {
     }
 }
 
-const callback = (mutationList, observer) => {
-    for (const mutation of mutationList) {
-        for (const node of mutation.addedNodes) {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-                if (node.querySelector(".profileHeader__info")) {
-                    resetForm("GET", "https://musicbrainz.org/artist/create", "Add Artist", addArtistToForm);
-                }
-                if (node.querySelector(".trackList")) {
-                    resetForm("POST", "https://musicbrainz.org/release/add", "Add Release", addReleaseToForm);
-                }
-                if (node.querySelector(".commentsList")) {
-                    resetForm("POST", "https://musicbrainz.org/release/add", "Add Track", addReleaseToForm);
-                }
-                const sidebar = node.querySelector(".l-sidebar-right");
-                if (sidebar && !sidebar.querySelector(".streamSidebar, .madeForUsername")) {
-                    sidebar.prepend(container);
-                }
-            }
-        }
-    }
-};
-
-const observer = new MutationObserver(callback);
-observer.observe(content, { childList: true, subtree: true });
-
 async function fetchHydration(url) {
+    url = fixNewURL(url);
     const response = await fetch(url, { credentials: "include" });
     if (!response.ok) throw new Error(`Response status: ${response.status}`);
     const text = await response.text();
     return JSON.parse(text.split("__sc_hydration =")[1].split(";</script>")[0]);;
 }
 
-let urlCache = new Map();
 async function urlInMusicBrainz(url) {
     const cached = urlCache.get(url);
     if (cached !== undefined) return cached;
@@ -153,6 +168,12 @@ async function urlInMusicBrainz(url) {
     const tuple = [targetType, mbid];
     urlCache.set(url, tuple);
     return tuple;
+}
+
+function fixNewURL(url) {
+    url = url.replace("soundcloud.com/n/", "soundcloud.com/");
+    url = url.split("?")[0];
+    return url;
 }
 
 async function addReleaseToForm() {
@@ -207,7 +228,7 @@ async function addSetToForm(data) {
     addToForm("Digital Media", "mediums.0.format");
 
     // Edit note
-    const edit_note = `${location.href}\n--\nSoundCloud: MusicBrainz import\nhttps://github.com/garylaski/userscripts`
+    const edit_note = `${fixNewURL(location.href)}\n--\nSoundCloud: MusicBrainz import\nhttps://github.com/garylaski/userscripts`
     addToForm(edit_note, "edit_note");
     addToForwarded(edit_note, "edit_note");
     // Release title
@@ -261,6 +282,7 @@ async function addSetToForm(data) {
 }
 
 function addURLToForm(url, type, url_count) {
+    url = fixNewURL(url);
     addToForm(url, `urls.${url_count}.url`);
     addToForm(type, `urls.${url_count}.link_type`);
 }
@@ -290,7 +312,7 @@ async function addTrackToForm(data, number) {
     let publisher_artist = false;
     if (data.publisher_metadata) {
         // Not supported
-        // if (data.publisher_metadata.isrc) 
+        // if (data.publisher_metadata.isrc)
         // if (data.publisher_metadata.writer_composer)
         if (data.publisher_metadata.artist) {
             addToForm(data.publisher_metadata.artist, `mediums.0.track.${number}.artist_credit.names.0.name`);
@@ -338,3 +360,4 @@ function convertReleaseTypes(type) {
             return 'Other';
     }
 }
+
